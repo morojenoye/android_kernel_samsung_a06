@@ -26,10 +26,6 @@ endif
 
 ifneq ($(CONFIG_MTK_COMBO),)
 
-ifneq ($(KERNEL_OUT),)
-    ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
-endif
-
 ifeq ($(TARGET_BUILD_VARIANT),$(filter $(TARGET_BUILD_VARIANT),userdebug user))
     #ldflags-y += -s
 endif
@@ -38,7 +34,6 @@ endif
 KBUILD_MODPOST_FAIL_ON_WARNINGS := y
 ###############################################################################
 
-#ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
 ifeq ($(CONFIG_ARM64), y)
     ccflags-y += -D CONFIG_MTK_WCN_ARM64
 endif
@@ -116,13 +111,7 @@ endif
 
 ###############################################################################
 MODULE_NAME := wmt_drv
-ifeq ($(CONFIG_WLAN_DRV_BUILD_IN),y)
-$(warning $(MODULE_NAME) build-in boot.img)
 obj-y += $(MODULE_NAME).o
-else
-$(warning $(MODULE_NAME) is kernel module)
-obj-m += $(MODULE_NAME).o
-endif
 
 ###############################################################################
 # common_detect
@@ -145,6 +134,10 @@ ifeq ($(CONFIG_MTK_COMBO_CHIP_MT6632),y)
 endif
 ifeq ($(COMBO_CHIP_SUPPORT), true)
     ccflags-y += -D MTK_WCN_COMBO_CHIP_SUPPORT
+endif
+
+ifeq ($(strip $(MTK_PLATFORM)), mt6765)
+    ccflags-y += -D WMT_PDMA_SLPPRT_MODE_SUPPORT
 endif
 
 ccflags-y += -I$(src)/common_main/linux/include
@@ -206,30 +199,11 @@ ifeq ($(findstring evb, $(MTK_PROJECT)), evb)
 ccflags-y += -D CFG_WMT_EVB
 endif
 
-KERNEL_VERSION_SUPPORT_CHIPID_LIST := $(patsubst %Y,%,$(patsubst %N,,$(patsubst %Ny,%Y,$(foreach chipid,$(patsubst mt%.c,%,$(notdir $(wildcard $(src)/common_main/platform/mt[0-9][0-9][0-9][0-9].c))),$(chipid)N$(CONFIG_MTK_COMBO_CHIP_CONSYS_$(chipid))))))
-$(warning KERNEL_VERSION_SUPPORT_CHIPID_LIST=[$(KERNEL_VERSION_SUPPORT_CHIPID_LIST)])
-
-ifeq ($(KERNEL_VERSION_SUPPORT_CHIPID_LIST),)
-ifneq ($(CONNSYS_PLATFORM),)
-ifneq ($(wildcard $(src)/common_main/platform/$(CONNSYS_PLATFORM).c),)
-$(MODULE_NAME)-objs += common_main/platform/$(CONNSYS_PLATFORM).o
-ifneq ($(wildcard $(src)/common_main/platform/$(CONNSYS_PLATFORM)_dbg.c),)
-$(MODULE_NAME)-objs += common_main/platform/$(CONNSYS_PLATFORM)_dbg.o
-endif
-ifneq ($(wildcard $(src)/common_main/platform/$(CONNSYS_PLATFORM)_pos_gen.c),)
-$(MODULE_NAME)-objs += common_main/platform/$(CONNSYS_PLATFORM)_pos_gen.o
-endif
-endif
-endif
-else
-$(MODULE_NAME)-objs += $(patsubst %,common_main/platform/mt%.o,$(KERNEL_VERSION_SUPPORT_CHIPID_LIST))
-SUPPORT_DEBUG_CHIPID_LIST = $(patsubst %.c,common_main/platform/%.o,$(notdir $(wildcard $(patsubst %,$(src)/common_main/platform/mt%_dbg.c,$(KERNEL_VERSION_SUPPORT_CHIPID_LIST)))))
-ifneq ($(SUPPORT_DEBUG_CHIPID_LIST),)
-$(MODULE_NAME)-objs += $(SUPPORT_DEBUG_CHIPID_LIST)
-endif
-SUPPORT_AUTO_GEN_CHIPID_LIST = $(patsubst %.c,common_main/platform/%.o,$(notdir $(wildcard $(patsubst %,$(src)/common_main/platform/mt%_pos_gen.c,$(KERNEL_VERSION_SUPPORT_CHIPID_LIST)))))
-ifneq ($(SUPPORT_AUTO_GEN_CHIPID_LIST),)
-$(MODULE_NAME)-objs += $(SUPPORT_AUTO_GEN_CHIPID_LIST)
+# Rissu: simplify things
+ifneq ($(filter "CONSYS_%",$(CONFIG_MTK_COMBO_CHIP)),)
+$(MODULE_NAME)-objs += common_main/platform/$(MTK_PLATFORM).o
+ifeq ($(shell test -e $(TOP)/common/common_main/platform/$(MTK_PLATFORM)_dbg.c; echo $$?),0)
+$(MODULE_NAME)-objs += common_main/platform/$(MTK_PLATFORM)_dbg.o
 endif
 endif
 
@@ -270,10 +244,6 @@ $(MODULE_NAME)-objs += common_main/linux/wmt_user_proc.o
 
 $(MODULE_NAME)-objs += common_main/linux/wmt_proc_dbg.o
 $(MODULE_NAME)-objs += common_main/linux/wmt_alarm.o
-
-ifneq ($(CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH),)
-$(MODULE_NAME)-objs += common_main/linux/fw_log_wmt.o
-endif
 
 ifeq ($(CONFIG_MTK_BTIF),$(filter $(CONFIG_MTK_BTIF),y m))
 $(MODULE_NAME)-objs += common_main/linux/stp_btif.o

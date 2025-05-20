@@ -41,7 +41,4 @@ else
 	include $(LOCAL_PATH)/build_wlan_drv.mk
 endif
 
-# hs14 delete below code for  SR-AL6528A-01-733  by meibo at 2022/09/21
-
-
 endif

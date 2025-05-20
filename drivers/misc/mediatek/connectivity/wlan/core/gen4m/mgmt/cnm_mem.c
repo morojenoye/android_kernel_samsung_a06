@@ -819,9 +819,8 @@ void cnmStaFreeAllStaByNetwork(struct ADAPTER *prAdapter, uint8_t ucBssIndex,
 	 * Update system operation parameters for AP mode
 	 */
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
-	if (prAdapter->fgIsP2PRegistered &&
-	    prBssInfo &&
-	    prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT) {
+	if (prAdapter->fgIsP2PRegistered
+		&& prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT) {
 		rlmUpdateParamsForAP(prAdapter, prBssInfo, FALSE);
 	}
 #endif
@@ -968,8 +967,7 @@ void cnmStaRecChangeState(struct ADAPTER *prAdapter, struct STA_RECORD *prStaRec
 		prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 			prStaRec->ucBssIndex);
 
-		if (prBssInfo &&
-		    prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT)
+		if (prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT)
 			rlmUpdateParamsForAP(prAdapter, prBssInfo, FALSE);
 	}
 #endif

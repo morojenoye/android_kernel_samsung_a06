@@ -29,10 +29,6 @@
 #include <linux/inetdevice.h>
 #include <linux/string.h>
 
-#include "fw_log_wifi.h"
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-#include "fw_log_ics.h"
-#endif
 #if (CFG_ANDORID_CONNINFRA_SUPPORT == 1)
 #include "wifi_pwr_on.h"
 #else
@@ -52,6 +48,13 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 uint32_t gDbgLevel = WIFI_LOG_DBG;
 
+#ifndef CONFIG_MTK_CONNECTIVITY_LOG
+#define WIFI_DBG_FUNC(fmt, arg...)
+#define WIFI_INFO_FUNC(fmt, arg...)
+#define WIFI_INFO_FUNC_LIMITED(fmt, arg...)
+#define WIFI_WARN_FUNC(fmt, arg...)
+#define WIFI_ERR_FUNC(fmt, arg...)
+#else
 #define WIFI_DBG_FUNC(fmt, arg...)	\
 	do { \
 		if (gDbgLevel >= WIFI_LOG_DBG) \
@@ -76,6 +79,7 @@ uint32_t gDbgLevel = WIFI_LOG_DBG;
 	do { \
 		pr_info(PFX "%s[E]: " fmt, __func__, ##arg); \
 	} while (0)
+#endif
 
 #define VERSION "2.0"
 
@@ -821,22 +825,6 @@ static int WIFI_init(void)
 	WIFI_INFO_FUNC("%s driver(major %d %d) installed.\n", WIFI_DRIVER_NAME,
 			WIFI_major, MAJOR(wifi_devno));
 
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	if (fw_log_wifi_init() < 0) {
-		WIFI_INFO_FUNC("connsys debug node init failed!!\n");
-		goto error;
-	}
-#if CFG_TC10_FEATURE
-	if (fw_log_write_log_to_file_init() < 0) {
-		WIFI_INFO_FUNC("connsys debug node write to file init failed!!\n");
-		goto error;
-	}
-#endif
-	if (fw_log_ics_init() < 0) {
-		WIFI_INFO_FUNC("ics log node init failed!!\n");
-		goto error;
-	}
-#endif
 	return 0;
 
 error:
@@ -877,19 +865,10 @@ static void WIFI_exit(void)
 
 	WIFI_INFO_FUNC("%s driver removed\n", WIFI_DRIVER_NAME);
 
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	fw_log_wifi_deinit();
-#if CFG_TC10_FEATURE
-	fw_log_write_log_to_file_deinit();
-#endif
-	fw_log_ics_deinit();
-#endif
 #if (CFG_ANDORID_CONNINFRA_SUPPORT == 1)
 	wifi_pwr_on_deinit();
 #endif
 }
-
-#ifdef MTK_WCN_BUILT_IN_DRIVER
 
 int mtk_wcn_wmt_wifi_init(void)
 {
@@ -902,10 +881,3 @@ void mtk_wcn_wmt_wifi_exit(void)
 	return WIFI_exit();
 }
 EXPORT_SYMBOL(mtk_wcn_wmt_wifi_exit);
-
-#else
-
-module_init(WIFI_init);
-module_exit(WIFI_exit);
-
-#endif

@@ -534,9 +534,6 @@ void nic_rxd_v2_check_wakeup_reason(
 	struct HW_MAC_CONNAC2X_RX_DESC *prRxStatus;
 	uint16_t u2PktLen = 0;
 	uint32_t u4HeaderOffset;
-#if CFG_TC10_FEATURE
-	struct sk_buff *skb = (struct sk_buff *)prSwRfb->pvPacket;
-#endif
 
 	prChipInfo = prAdapter->chip_info;
 
@@ -639,9 +636,6 @@ void nic_rxd_v2_check_wakeup_reason(
 #if CFG_SUPPORT_WAKEUP_STATISTICS
 		nicUpdateWakeupStatistics(prAdapter, RX_DATA_INT);
 #endif /* fos_change end */
-#if CFG_TC10_FEATURE
-		skb->mark |= 0x80000000;
-#endif
 
 		u2PktLen =
 			HAL_MAC_CONNAC2X_RX_STATUS_GET_RX_BYTE_CNT(prRxStatus);
@@ -693,6 +687,7 @@ void nic_rxd_v2_check_wakeup_reason(
 				u2Temp);
 			break;
 		case ETH_P_ARP:
+			break;
 		case ETH_P_1X:
 		case ETH_P_PRE_1X:
 #if CFG_SUPPORT_WAPI

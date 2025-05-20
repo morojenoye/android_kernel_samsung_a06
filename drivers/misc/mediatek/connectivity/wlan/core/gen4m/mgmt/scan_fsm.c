@@ -1643,9 +1643,10 @@ scnDoZeroMdrdyRecoveryCheck(IN struct ADAPTER *prAdapter,
 						SER_ENABLE_L3_RX_ABORT |
 						SER_ENABLE_L3_TX_ABORT |
 						SER_ENABLE_L3_TX_DISABLE |
-						SER_ENABLE_L3_BF_RECOVER), 0);
+						SER_ENABLE_L3_BF_RECOVER), 0,
+						FALSE);
 				wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-					SER_SET_L1_RECOVER, 0);
+					SER_SET_L1_RECOVER, 0, FALSE);
 			}
 	}
 	/* Normal: Mdrdy>0 and beacon+ProbReq>0 case */

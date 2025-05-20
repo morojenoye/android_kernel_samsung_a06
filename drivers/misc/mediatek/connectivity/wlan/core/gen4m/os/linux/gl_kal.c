@@ -101,6 +101,10 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 
+/* for pm */
+#include <linux/suspend.h>
+#include <linux/notifier.h>
+
 /* for uevent */
 #include <linux/miscdevice.h>   /* for misc_register, and SYNTH_MINOR */
 #include <linux/kobject.h>
@@ -222,10 +226,17 @@ u_int8_t wlan_perf_monitor_force_enable = FALSE;
 static int wlan_fb_notifier_callback(struct notifier_block
 				*self, unsigned long event, void *data);
 
-void *wlan_fb_notifier_priv_data;
+static int wlan_pm_notifier_callback(struct notifier_block
+				*self, unsigned long event, void *data);
+
 static struct notifier_block wlan_fb_notifier = {
 	.notifier_call = wlan_fb_notifier_callback
 };
+static struct notifier_block wlan_pm_notifier = {
+	.notifier_call = wlan_pm_notifier_callback
+};
+
+void *wlan_notifier_priv_data;
 
 static struct miscdevice wlan_object;
 
@@ -278,36 +289,6 @@ static uint8_t *apucCr4FwName[] = {
 	(uint8_t *) CFG_CR4_FW_FILENAME "_MT",
 	NULL
 };
-
-#if !CONFIG_WLAN_DRV_BUILD_IN
-/*----------------------------------------------------------------------------*/
-/*!
- * \brief  To leverage systrace, use the same name, i.e. tracing_mark_write,
- *         which ftrace would write when systrace writes msg to
- *         /sys/kernel/debug/tracing/trace_marker with trace_options enabling
- *         print-parent
- *
- */
-/*----------------------------------------------------------------------------*/
-void tracing_mark_write(const char *fmt, ...)
-{
-#define __BUFFER_SIZE 1024
-	va_list ap;
-	char buf[__BUFFER_SIZE];
-
-	if ((aucDebugModule[DBG_TRACE_IDX] & DBG_CLASS_TEMP) == 0)
-		return;
-
-	va_start(ap, fmt);
-	vsnprintf(buf, __BUFFER_SIZE, fmt, ap);
-	buf[__BUFFER_SIZE - 1] = '\0';
-	va_end(ap);
-
-#undef __BUFFER_SIZE
-
-	trace_printk("%s", buf);
-}
-#endif
 
 /*----------------------------------------------------------------------------*/
 /*!
@@ -583,13 +564,6 @@ kalFirmwareImageMapping(IN struct GLUE_INFO *prGlueInfo,
 
 		idx = 0;
 		apucName[idx] = (uint8_t *)(aucNameBody + idx);
-
-                /*hs04 code for DEAL6398A-37 by kefan at 2022/08/17 start*/
-                if (apucName[idx] == NULL) {
-		    DBGLOG(INIT, ERROR, "apucName[idx] is NULL\n");
-		    return NULL;
-                }
-                /*hs04 code for DEAL6398A-37 by kefan at 2022/08/17 end*/
 
 		if (eDlIdx == IMG_DL_IDX_PATCH) {
 			/* construct the file name for patch */
@@ -4584,11 +4558,6 @@ int main_thread(void *data)
 #if (CFG_SUPPORT_CONNINFRA == 1)
 	struct timespec64 time;
 #endif
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	struct CMD_CONNSYS_FW_LOG rFwLogCmd;
-	uint32_t u4BufLen;
-	uint32_t u4FwLevel = ENUM_WIFI_LOG_LEVEL_DEFAULT;
-#endif
 
 #if CFG_SUPPORT_MULTITHREAD
 	prGlueInfo->u4TxThreadPid = KAL_GET_CURRENT_THREAD_ID();
@@ -4921,27 +4890,6 @@ int main_thread(void *data)
 				prGlueInfo->prAdapter->u4FWLastUpdateTime =
 					(unsigned int)time.tv_sec;
 			}
-		}
-#endif
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-		if (!prGlueInfo->prAdapter->fgSetLogOnOff) {
-			kalMemZero(&rFwLogCmd, sizeof(rFwLogCmd));
-			rFwLogCmd.fgCmd = FW_LOG_CMD_ON_OFF;
-			rFwLogCmd.fgValue = getFWLogOnOff();
-
-			connsysFwLogControl(prGlueInfo->prAdapter,
-				(void *)&rFwLogCmd,
-				sizeof(struct CMD_CONNSYS_FW_LOG),
-				&u4BufLen);
-		}
-		if (!prGlueInfo->prAdapter->fgSetLogLevel) {
-			wlanDbgGetGlobalLogLevel(
-					ENUM_WIFI_LOG_MODULE_FW, &u4FwLevel);
-
-			wlanDbgSetLogLevelImpl(prGlueInfo->prAdapter,
-						ENUM_WIFI_LOG_LEVEL_VERSION_V1,
-						ENUM_WIFI_LOG_MODULE_FW,
-						u4FwLevel);
 		}
 #endif
 
@@ -8796,7 +8744,7 @@ void kalRxGroTcCheck(struct GLUE_INFO *glue)
 int32_t kalPerMonSetForceEnableFlag(uint8_t uFlag)
 {
 	struct GLUE_INFO *prGlueInfo = (struct GLUE_INFO *)
-				       wlan_fb_notifier_priv_data;
+				       wlan_notifier_priv_data;
 
 	wlan_perf_monitor_force_enable = uFlag == 0 ? FALSE : TRUE;
 	DBGLOG(SW4, INFO,
@@ -8816,7 +8764,7 @@ static int wlan_fb_notifier_callback(struct notifier_block
 	struct fb_event *evdata = data;
 	int32_t blank = 0;
 	struct GLUE_INFO *prGlueInfo = (struct GLUE_INFO *)
-				       wlan_fb_notifier_priv_data;
+				       wlan_notifier_priv_data;
 
 	/* If we aren't interested in this event, skip it immediately ... */
 	if ((event != FB_EVENT_BLANK) || !prGlueInfo)
@@ -8855,25 +8803,72 @@ static int wlan_fb_notifier_callback(struct notifier_block
 	return 0;
 }
 
-int32_t kalFbNotifierReg(IN struct GLUE_INFO *prGlueInfo)
+static int wlan_pm_notifier_callback(struct notifier_block
+				     *self, unsigned long event, void *data)
+{
+	struct GLUE_INFO *prGlueInfo = (struct GLUE_INFO *)
+				       wlan_notifier_priv_data;
+
+	if (kalHaltTryLock())
+		return NOTIFY_STOP;
+
+	if (kalIsHalted() || !prGlueInfo)
+		goto out;
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+	case PM_HIBERNATION_PREPARE:
+		if (prGlueInfo->fgIsInSuspendMode)
+			goto out;
+		prGlueInfo->fgIsInSuspendMode = TRUE;
+		wlanSetSuspendMode(prGlueInfo, TRUE);
+		p2pSetSuspendMode(prGlueInfo, TRUE);
+		break;
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+		if (!prGlueInfo->fgIsInSuspendMode)
+			goto out;
+		prGlueInfo->fgIsInSuspendMode = FALSE;
+		wlanSetSuspendMode(prGlueInfo, FALSE);
+		p2pSetSuspendMode(prGlueInfo, FALSE);
+		break;
+	}
+
+out:
+	kalHaltUnlock();
+	return NOTIFY_DONE;
+}
+
+int32_t kalNotifierReg(IN struct GLUE_INFO *prGlueInfo)
 {
 	int32_t i4Ret;
 
-	wlan_fb_notifier_priv_data = prGlueInfo;
+	wlan_notifier_priv_data = prGlueInfo;
 
 	i4Ret = fb_register_client(&wlan_fb_notifier);
-	if (i4Ret)
+	if (i4Ret) {
 		DBGLOG(SW4, WARN, "Register wlan_fb_notifier failed:%d\n",
 		       i4Ret);
+		return i4Ret;
+	}
 	else
 		DBGLOG(SW4, TRACE, "Register wlan_fb_notifier succeed\n");
+
+	i4Ret = register_pm_notifier(&wlan_pm_notifier);
+	if (i4Ret)
+		DBGLOG(SW4, WARN, "Register wlan_pm_notifier failed:%d\n",
+		       i4Ret);
+	else
+		DBGLOG(SW4, TRACE, "Register wlan_pm_notifier succeed\n");
+
 	return i4Ret;
 }
 
-void kalFbNotifierUnReg(void)
+void kalNotifierUnReg(void)
 {
 	fb_unregister_client(&wlan_fb_notifier);
-	wlan_fb_notifier_priv_data = NULL;
+	unregister_pm_notifier(&wlan_pm_notifier);
+	wlan_notifier_priv_data = NULL;
 }
 
 #if CFG_SUPPORT_DFS
@@ -9100,16 +9095,18 @@ struct BUFFERED_LOG_ENTRY *kalGetBufferLog(struct ADAPTER *prAdapter,
 
 	if (ucBssIndex >= KAL_BSS_NUM)
 		return NULL;
-
-	LINK_FOR_EACH_ENTRY(entry, list, rLinkEntry, struct BUFFERED_LOG_ENTRY)
-	{
-		if (entry->ucSn == ucSn && entry->ucBssIdx == ucBssIndex) {
-			DBGLOG(AIS, WARN, "Found bss[%d] sn[%d]\n",
-				ucBssIndex, ucSn);
-			return entry;
+	
+	if (!LINK_IS_EMPTY(list)) {
+		LINK_FOR_EACH_ENTRY(entry, list, rLinkEntry, struct BUFFERED_LOG_ENTRY)
+		{
+			if (entry->ucSn == ucSn && entry->ucBssIdx == ucBssIndex) {
+				DBGLOG(AIS, WARN, "Found bss[%d] sn[%d]\n",
+					ucBssIndex, ucSn);
+				return entry;
+			}
 		}
 	}
-
+	
 	return NULL;
 }
 
@@ -9979,40 +9976,6 @@ kalSyncTimeToFW(IN struct ADAPTER *prAdapter, IN u_int8_t fgInitCmd,
 void
 kalSyncTimeToFWByIoctl(void)
 {
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	struct GLUE_INFO *prGlueInfo;
-
-	WIPHY_PRIV(wlanGetWiphy(), prGlueInfo);
-
-	DEBUGFUNC("kalSyncTimeToFWByIoctl");
-
-	if (getFWLogOnOff() == 1 &&
-		((prGlueInfo) && (prGlueInfo->prAdapter))) {
-		uint32_t u4BufLen = 0;
-		uint32_t rStatus = WLAN_STATUS_SUCCESS;
-		struct PARAM_CUSTOM_CHIP_CONFIG_STRUCT rChipConfigInfo;
-		struct timespec64 time;
-		unsigned int second, usecond;
-
-		ktime_get_real_ts64(&time);
-		second = (unsigned int)time.tv_sec;
-		usecond = (unsigned int)NSEC_TO_USEC(time.tv_nsec);
-
-		setTimeParameter(&rChipConfigInfo, sizeof(rChipConfigInfo),
-				second, usecond);
-
-		DBGLOG(INIT, INFO,
-				"Sync kernel time %u %u", second, usecond);
-
-		rStatus = kalIoctl(prGlueInfo, wlanoidSetChipConfig,
-				   &rChipConfigInfo, sizeof(rChipConfigInfo),
-				   FALSE, FALSE, TRUE, &u4BufLen);
-		if (rStatus == WLAN_STATUS_FAILURE)
-			DBGLOG(INIT, WARN, "Failed to sync kernel time to FW.");
-		else
-			prGlueInfo->prAdapter->u4FWLastUpdateTime = second;
-	}
-#endif
 }
 
 void kalUpdateCompHdlrRec(IN struct ADAPTER *prAdapter,

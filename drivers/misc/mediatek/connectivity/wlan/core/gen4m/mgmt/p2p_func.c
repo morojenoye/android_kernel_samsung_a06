@@ -107,10 +107,6 @@ struct APPEND_VAR_IE_ENTRY txProbeRspIETable[] = {
 #if CFG_SUPPORT_MTK_SYNERGY
 	, {(ELEM_HDR_LEN + ELEM_MIN_LEN_MTK_OUI), NULL,
 			rlmGenerateMTKOuiIE}	/* 221 */
-	, {0, rlmCalculateCustomer1OuiIELen,
-	   rlmGenerateCustomer1OuiIE}
-	, {0, rlmCalculateCustomer2OuiIELen,
-	   rlmGenerateCustomer2OuiIE}
 #endif
 	, {(ELEM_HDR_LEN + ELEM_MAX_LEN_WPA), NULL,
 			rsnGenerateWPAIE}	/* 221 */
@@ -700,12 +696,6 @@ p2pFuncAddPendingMgmtLinkEntry(struct ADAPTER *prAdapter,
 
 	prPendingMgmtInfo = cnmMemAlloc(prAdapter, RAM_TYPE_MSG,
 		sizeof(struct P2P_PENDING_MGMT_INFO));
-	if (!prPendingMgmtInfo) {
-		DBGLOG(P2P, WARN, "Allocate memory fail. cookie:0x%llx\n",
-			u8Cookie);
-		return;
-	}
-
 	prPendingMgmtInfo->u8PendingMgmtCookie = u8Cookie;
 	LINK_INSERT_TAIL(&prGlueP2pInfo->rWaitTxDoneLink,
 		&prPendingMgmtInfo->rLinkEntry);
@@ -6541,7 +6531,7 @@ void p2pFuncGenerateP2P_IE_NoA(IN struct ADAPTER *prAdapter,
 {
 	struct IE_P2P *prIeP2P;
 	uint8_t aucWfaOui[] = VENDOR_OUI_WFA_SPECIFIC;
-	uint32_t u4AttributeLen = 0;
+	uint32_t u4AttributeLen;
 	struct BSS_INFO *prBssInfo;
 
 	prBssInfo = prAdapter->aprBssInfo[prMsduInfo->ucBssIndex];
@@ -6826,12 +6816,6 @@ void p2pFuncSwitchSapChannel(
 		goto exit;
 	}
 
-	prP2pBssInfo = cnmGetSapBssInfo(prAdapter);
-	if (!prP2pBssInfo) {
-		DBGLOG(P2P, TRACE, "SAP is not active\n");
-		goto exit;
-	}
-
 	prAisBssInfo = aisGetConnectedBssInfo(prAdapter);
 	if (!prAisBssInfo) {
 		ucStaChannelNum = 0;
@@ -6863,6 +6847,12 @@ void p2pFuncSwitchSapChannel(
 		P2P_CONCURRENCY_POLICY_REMOVE)
 		if (prAisBssInfo)
 			p2pFuncRemoveOneSap(prAdapter);
+
+	prP2pBssInfo = cnmGetSapBssInfo(prAdapter);
+	if (!prP2pBssInfo) {
+		DBGLOG(P2P, TRACE, "SAP is not active\n");
+		goto exit;
+	}
 
 	if (prAdapter->rWifiVar.fgSapConcurrencyPolicy ==
 		P2P_CONCURRENCY_POLICY_KEEP) {

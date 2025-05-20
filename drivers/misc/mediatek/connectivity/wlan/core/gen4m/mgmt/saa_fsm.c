@@ -1044,8 +1044,6 @@ void saaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 	if (!IS_AP_STA(prStaRec))
 		return;
 
-	DBGLOG(SAA, INFO,"dbg_eAuthAssocState %d/n",prStaRec->eAuthAssocState);
-
 	switch (prStaRec->eAuthAssocState) {
 	case SAA_STATE_SEND_AUTH1:
 	case SAA_STATE_WAIT_AUTH2:
@@ -1192,7 +1190,6 @@ void saaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 				prStaRec->u2StatusCode = u2StatusCode;
 			}
 		}
-		DBGLOG(SAA, INFO,"dbg_ucSAEAuthNoResp %d/n",prAdapter->rWifiVar.ucSAEAuthNoResp);
 		/* for testing only,
 		 * deliberately making STA unable to receive SAE confirm
 		 */
@@ -1203,21 +1200,16 @@ void saaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 					       AUTH_TRANSACTION_SEQ_2,
 					       &u2StatusCode) ==
 					       WLAN_STATUS_SUCCESS) {
-				if (u2StatusCode == STATUS_SAE_HASH_TO_ELEMENT)
-					DBGLOG(SAA, INFO,
-						"SAE auth uses the hash-to-element method, instead of looping\n");
-				else if (u2StatusCode !=
-						STATUS_CODE_SUCCESSFUL) {
+				/* Record join fail status code only*/
+				if (u2StatusCode != STATUS_CODE_SUCCESSFUL) {
 					DBGLOG(SAA, INFO,
 				       "Auth Req was rejected by [" MACSTR
 				       "], Status Code = %d\n",
 				       MAC2STR(prStaRec->aucMacAddr),
 				       u2StatusCode);
-					/* Record join fail status code only*/
 					prStaRec->u2StatusCode = u2StatusCode;
 				}
 			}
-			DBGLOG(SAA, INFO,"dbg_u2StatusCode %d/n",u2StatusCode);
 			kalIndicateRxMgmtFrame(prAdapter, prAdapter->prGlueInfo,
 				prSwRfb, prStaRec->ucBssIndex);
 		}
@@ -1415,8 +1407,55 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 			/* if state != CONNECTED, don't do disconnect again */
 			if (kalGetMediaStateIndicated(prAdapter->prGlueInfo,
 				ucBssIndex) !=
-				MEDIA_STATE_CONNECTED)
+				MEDIA_STATE_CONNECTED){
+
+#if CFG_TC10_FEATURE
+
+				DBGLOG(SAA, INFO,
+					"Receive DEAUTH when state == [%s]\n",
+					apucDebugAAState[
+						prStaRec->eAuthAssocState]);
+
+				if (authProcessRxDeauthFrame(prSwRfb,
+					prStaRec->aucMacAddr,
+					&prStaRec->u2ReasonCode)
+						== WLAN_STATUS_SUCCESS) {
+
+					/* Record the Status Code of
+					 * ASSOC Request
+					 */
+					prStaRec->u2StatusCode =
+						STATUS_CODE_ASSOC_TIMEOUT;
+
+					cnmTimerStopTimer(prAdapter,
+					   &prStaRec->rTxReqDoneOrRxRespTimer);
+
+					cnmStaRecChangeState(prAdapter,
+						prStaRec, STA_STATE_1);
+
+					DBGLOG(SAA, INFO,
+						"Assoc Req was rejected by DEAUTH from ["
+						MACSTR "], Reason Code = %d\n",
+						MAC2STR(prStaRec->aucMacAddr),
+						prStaRec->u2ReasonCode);
+
+					/* Reset Send Auth/(Re)Assoc Frame Count
+					 */
+					prStaRec->ucTxAuthAssocRetryCount = 0;
+
+					/* update RCPI */
+					ASSERT(prSwRfb->prRxStatusGroup3);
+					prStaRec->ucRCPI =
+					nicRxGetRcpiValueFromRxv(
+						prAdapter, RCPI_MODE_MAX,
+						prSwRfb);
+
+					saaFsmSteps(prAdapter, prStaRec,
+						AA_STATE_IDLE, NULL);
+				}
+#endif
 				break;
+			}
 
 			if (prStaRec->ucStaState > STA_STATE_1) {
 				prBssDesc = scanSearchBssDescByBssid(prAdapter,

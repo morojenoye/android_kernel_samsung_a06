@@ -890,9 +890,6 @@ static u_int8_t glResetMsgHandler(enum ENUM_WMTMSG_TYPE eMsgType,
 				DBGLOG(INIT, WARN,
 					"Whole chip reset start! reason=[%s]\n",
 					apucRstReason[eResetReason]);
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-				fw_log_wifi_irq_handler();
-#endif
 				fgIsResetting = TRUE;
 				fgSimplifyResetFlow = TRUE;
 				wifi_reset_start();
@@ -932,9 +929,6 @@ static u_int8_t glResetMsgHandler(enum ENUM_WMTMSG_TYPE eMsgType,
 				break;
 			case WMTRSTMSG_0P5RESET_START:
 				DBGLOG(INIT, WARN, "WF chip reset start!\n");
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-				fw_log_wifi_irq_handler();
-#endif
 				fgIsResetting = TRUE;
 				fgSimplifyResetFlow = TRUE;
 				wifi_reset_start();
@@ -1314,8 +1308,10 @@ int wlan_reset_thread_main(void *data)
 #endif
 		WIPHY_PRIV(wlanGetWiphy(), prGlueInfo);
 		if (test_and_clear_bit(GLUE_FLAG_RST_START_BIT, &g_ulFlag)) {
+#if defined(CONFIG_ANDROID) && (CFG_ENABLE_WAKE_LOCK)
 			if (KAL_WAKE_LOCK_ACTIVE(NULL, g_IntrWakeLock))
 				KAL_WAKE_UNLOCK(NULL, g_IntrWakeLock);
+#endif
 
 			if (g_IsWholeChipRst) {
 #if (CFG_ANDORID_CONNINFRA_COREDUMP_SUPPORT == 1)
@@ -1358,8 +1354,10 @@ int wlan_reset_thread_main(void *data)
 				g_SubsysRstTotalCnt);
 		}
 		if (test_and_clear_bit(GLUE_FLAG_RST_END_BIT, &g_ulFlag)) {
+#if defined(CONFIG_ANDROID) && (CFG_ENABLE_WAKE_LOCK)
 			if (KAL_WAKE_LOCK_ACTIVE(NULL, g_IntrWakeLock))
 				KAL_WAKE_UNLOCK(NULL, g_IntrWakeLock);
+#endif
 			DBGLOG(INIT, INFO, "Whole chip reset end start\n");
 			glResetMsgHandler(WMTMSG_TYPE_RESET,
 				WMTRSTMSG_RESET_END);

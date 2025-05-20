@@ -1264,48 +1264,6 @@ do { \
 /*----------------------------------------------------------------------------*/
 /* Macros of systrace operations for using in Driver Layer                    */
 /*----------------------------------------------------------------------------*/
-#if !CONFIG_WLAN_DRV_BUILD_IN
-
-#define kalTraceBegin(_fmt, ...) \
-	tracing_mark_write("B|%d|" _fmt "\n", current->tgid, ##__VA_ARGS__)
-
-#define kalTraceEnd() \
-	tracing_mark_write("E|%d\n", current->tgid)
-
-#define kalTraceInt(_value, _fmt, ...) \
-	tracing_mark_write("C|%d|" _fmt "|%d\n", \
-		current->tgid, ##__VA_ARGS__, _value)
-
-#define kalTraceCall() \
-	{ kalTraceBegin("%s", __func__); kalTraceEnd(); }
-
-#define kalTraceEvent(_fmt, ...) \
-	{ kalTraceBegin(_fmt, ##__VA_ARGS__); kalTraceEnd(); }
-
-#define __type_is_void(expr) __builtin_types_compatible_p(typeof(expr), void)
-#define __expr_zero(expr) __builtin_choose_expr(__type_is_void(expr), 0, (expr))
-
-#define TRACE(_expr, _fmt, ...) \
-	__builtin_choose_expr(__type_is_void(_expr), \
-	__TRACE_VOID(_expr, _fmt, ##__VA_ARGS__), \
-	__TRACE(__expr_zero(_expr), _fmt, ##__VA_ARGS__))
-
-#define __TRACE(_expr, _fmt, ...) \
-	({ \
-		typeof(_expr) __ret; \
-		kalTraceBegin(_fmt, ##__VA_ARGS__); \
-		__ret = (_expr); \
-		kalTraceEnd(); \
-		__ret; \
-	})
-
-#define __TRACE_VOID(_expr, _fmt, ...) \
-	({ \
-		kalTraceBegin(_fmt, ##__VA_ARGS__); \
-		(void) (_expr); \
-		kalTraceEnd(); \
-	})
-#else
 
 #define kalTraceBegin(_fmt, ...)
 #define kalTraceEnd()
@@ -1313,8 +1271,6 @@ do { \
 #define kalTraceCall()
 #define kalTraceEvent(_fmt, ...)
 #define TRACE(_expr, _fmt, ...) _expr
-
-#endif
 
 /*----------------------------------------------------------------------------*/
 /* Macros of wiphy operations for using in Driver Layer                       */
@@ -1961,8 +1917,8 @@ int32_t kalGetFwFlavor(uint8_t *flavor);
 int32_t kalGetFwFlavorByPlat(uint8_t *flavor);
 int32_t kalGetConnsysVerId(void);
 int32_t kalPerMonSetForceEnableFlag(uint8_t uFlag);
-int32_t kalFbNotifierReg(IN struct GLUE_INFO *prGlueInfo);
-void kalFbNotifierUnReg(void);
+int32_t kalNotifierReg(IN struct GLUE_INFO *prGlueInfo);
+void kalNotifierUnReg(void);
 
 #if KERNEL_VERSION(3, 0, 0) <= LINUX_VERSION_CODE
 /* since: 0b5c9db1b11d3175bb42b80663a9f072f801edf5 */
@@ -2040,16 +1996,9 @@ int _kalSnprintf(char *buf, size_t size, const char *fmt, ...);
 int _kalSprintf(char *buf, const char *fmt, ...);
 
 /* systrace utilities */
-#if !CONFIG_WLAN_DRV_BUILD_IN
-void tracing_mark_write(const char *fmt, ...);
-#endif
 
 uint32_t kalSetSuspendFlagToEMI(IN struct ADAPTER
 	*prAdapter, IN u_int8_t fgSuspend);
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-extern uint32_t getFWLogOnOff(void);
-#endif
 
 void setTimeParameter(
 	struct PARAM_CUSTOM_CHIP_CONFIG_STRUCT *prChipConfigInfo,

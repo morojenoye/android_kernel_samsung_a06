@@ -3,6 +3,26 @@ ifeq ($(CONFIG_MTK_PLATFORM),)
 endif
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
 
+ifeq ($(TARGET_PRODUCT),)
+$(warning TARGET_PRODUCT is empty! using default option.)
+endif
+
+# disable logs!
+ifeq ($(CONFIG_MTK_CONNECTIVITY_LOG),y)
+ccflags-y += -DDBG_DISABLE_ALL_LOG=1
+endif
+
+# Caused by -ENOENT
+# These device is using different firmware.
+ifeq ($(TARGET_PRODUCT), a03s)
+$(info -- Rissu's a03s/a12 workaround applied!)
+ccflags-y += -D__A03S_A12_WORKAROUND__
+endif
+ifeq ($(TARGET_PRODUCT), a12)
+$(info -- Rissu's a03s/a12 workaround applied!)
+ccflags-y += -D__A03S_A12_WORKAROUND__
+endif
+
 # ---------------------------------------------------
 # OS option
 # ---------------------------------------------------
@@ -30,9 +50,6 @@ $(info os option: $(os))
 # ---------------------------------------------------
 # ALPS Setting
 # ---------------------------------------------------
-ifneq ($(KERNEL_OUT),)
-    ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
-endif
 
 ifeq ($(KBUILD_MODPOST_FAIL_ON_WARNINGS),)
     # Force build fail on modpost warning
@@ -167,6 +184,32 @@ else
     ccflags-y += -DCFG_ENABLE_HOST_BUS_TIMEOUT=0
 endif
 
+ifneq ($(findstring 96516,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96516SA1_DOMAIN_CH
+endif
+
+ifneq ($(findstring a03,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96516SA1_DOMAIN_CH
+endif
+
+ifneq ($(findstring 96616,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96616AA1_DOMAIN_PWR
+endif
+
+ifneq ($(findstring a04,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96616AA1_DOMAIN_PWR
+endif
+
+########A045
+ifneq ($(filter a04%,$(TARGET_PRODUCT)),)
+ccflags-y += -DCONFIG_MTK_NEW_DOMAIN_CH
+endif
+
+########A055
+ifneq ($(filter a05m%,$(TARGET_PRODUCT)),)
+ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+
 ifneq ($(findstring 5_0,$(MTK_COMBO_CHIP)),)
 ccflags-y:=$(filter-out -USOC5_0,$(ccflags-y))
 ccflags-y += -DSOC5_0
@@ -208,15 +251,7 @@ ifneq ($(findstring tb8791tp1_64_titan_javan_tiger, $(CONFIG_ARCH_MTK_PROJECT)),
 ccflags-y += -DCFG_RLM_TXPWR_INIT_FILE_HEADER=\"rlm_txpwr_init_tab8.h\"
 endif
 endif
-########T225, T227, A037F
-ifneq ($(filter gta7lite% a03snnxx,$(TARGET_PRODUCT)),)
-ccflags-y += -DCONFIG_MTK_N18_DOMAIN_CH
-endif
-########a14mnnxx and A065
-ifneq ($(filter a14mnnxx a06xx a06ub,$(TARGET_PRODUCT)),)
-ccflags-y += -DCONFIG_MTK_N27_DOMAIN_CH
-endif
-######
+
 ifneq ($(findstring 7_0,$(MTK_COMBO_CHIP)),)
 ccflags-y:=$(filter-out -USOC7_0,$(ccflags-y))
 ccflags-y += -DSOC7_0
@@ -329,11 +364,9 @@ else ifneq ($(filter 6765, $(WLAN_CHIP_ID)),)
     ccflags-y += -DCFG_CERVENO
 else ifneq ($(filter 6833, $(WLAN_CHIP_ID)),)
     ccflags-y += -DCFG_PALMER
-ifneq ($(filter a23ex%, $(PROJECT_NAME)),)
-    ccflags-y += -DCONFIG_MTK_NEW_DOMAIN_CH
-endif
+
 ifneq ($(filter a13x%, $(PROJECT_NAME)),)
-ifneq ($(filter %xx %skt, $(TARGET_PRODUCT)),)
+ifneq ($(findstring xx, $(TARGET_PRODUCT)),)
     ccflags-y += -DCONFIG_MTK_NEW_DOMAIN_CH
 endif
 endif
@@ -341,9 +374,6 @@ endif
 else ifneq ($(filter 6877, $(WLAN_CHIP_ID)),)
     ccflags-y += -DCFG_MONTROSE
     CONFIG_MTK_WIFI_NAN=y
-    ifneq ($(filter m53%, $(PROJECT_NAME)),)
-        CONFIG_MTK_WIFI_NAN=n
-    endif
 endif
 
 ifneq ($(filter 8791, $(WLAN_CHIP_ID)),)
@@ -368,28 +398,16 @@ endif
 ifeq ($(CONFIG_MTK_WIFI_CONNINFRA_SUPPORT), y)
     ccflags-y += -DCFG_SUPPORT_CONNINFRA=1
     ccflags-y += -DCFG_SUPPORT_PRE_ON_PHY_ACTION=1
-    ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/include
+    ccflags-y += -I$(TOP)/conninfra/include
     ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/power_throttling
     ccflags-y += -DCFG_ANDORID_CONNINFRA_COREDUMP_SUPPORT=1
-    ifneq ($(CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH),)
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/platform/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/base/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility/connsyslog
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility/coredump
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility/coredump/platform/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra/debug_utility/metlog
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/wlan/adaptor
-    endif
 else
     ccflags-y += -DCFG_SUPPORT_CONNINFRA=0
     ccflags-y += -DCFG_ANDORID_CONNINFRA_COREDUMP_SUPPORT=0
     ccflags-y += -DCFG_SUPPORT_PRE_ON_PHY_ACTION=0
     ifeq ($(WMT_SUPPORT), y)
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/common/common_main/include
-        ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/common/common_main/linux/include
+        ccflags-y += -I$(TOP)/common/common_main/include
+        ccflags-y += -I$(TOP)/common/common_main/linux/include
         ifeq ($(CONFIG_MTK_CONN_LTE_IDC_SUPPORT),y)
             ccflags-y += -DWMT_IDC_SUPPORT=1
         else
@@ -415,12 +433,6 @@ ifneq ($(WIFI_IP_SET),)
     ccflags-y += -DCFG_WIFI_IP_SET=$(WIFI_IP_SET)
 else
     ccflags-y += -DCFG_WIFI_IP_SET=1
-endif
-
-ifneq ($(filter MTK_WCN_REMOVE_KERNEL_MODULE,$(KBUILD_SUBDIR_CCFLAGS)),)
-    ccflags-y += -DCFG_BUILT_IN_DRIVER=1
-else
-    ccflags-y += -DCFG_BUILT_IN_DRIVER=0
 endif
 
 ifneq ($(findstring UT_TEST_MODE,$(MTK_COMBO_CHIP)),)
@@ -565,7 +577,7 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/power_throttling/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/common
 ccflags-y += -I$(srctree)/drivers/devfreq/
 ccflags-y += -I$(srctree)/net
-ccflags-y += -I$(TOP)/vendor/mediatek/kernel_modules/connectivity/connfem/include/
+ccflags-y += -I$(TOP)/connfem/include/
 
 ifneq ($(CONFIG_MTK_MDDP_SUPPORT),)
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/mddp/include/
@@ -597,22 +609,7 @@ ifneq ($(PLATFORM_FLAGS), )
     ccflags-y += $(PLATFORM_FLAGS)
 endif
 
-ifeq ($(CONFIG_MTK_WIFI_ONLY),$(filter $(CONFIG_MTK_WIFI_ONLY),m y))
-obj-$(CONFIG_MTK_WIFI_ONLY) += $(MODULE_NAME).o
-else
-obj-$(CONFIG_MTK_COMBO_WIFI) += $(MODULE_NAME).o
-#obj-y += $(MODULE_NAME).o
-endif
-
-ifeq ($(CONFIG_WLAN_DRV_BUILD_IN),y)
-$(warning $(MODULE_NAME) build-in boot.img)
 obj-y += $(MODULE_NAME).o
-ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=1
-else
-$(warning $(MODULE_NAME) is kernel module)
-obj-m += $(MODULE_NAME).o
-ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=0
-endif
 
 ifneq ($(filter yes,$(MTK_TC10_IN_HOUSE)),)
 ccflags-y += -DMTK_TC10_IN_HOUSE
@@ -982,7 +979,9 @@ endif
 # ---------------------------------------------------
 # Service git List
 # ---------------------------------------------------
+
 SERVICE_DIR  := wlan_service/
+MTK_WLAN_SERVICE_PATH := $(SERVICE_DIR)
 
 ifneq ($(findstring wlan_service,$(MTK_WLAN_SERVICE_PATH)),)
 MTK_WLAN_SERVICE=yes
@@ -997,7 +996,7 @@ ccflags-y += -I$(src)/$(SERVICE_DIR)include
 ccflags-y += -I$(src)/$(SERVICE_DIR)service/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/osal/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/hal/include
-$(info $$CCFLAG is [{$(ccflags-y)}])
+#$(info $$CCFLAG is [{$(ccflags-y)}])
 SERVICE_OBJS := $(SERVICE_DIR)agent/agent.o \
                 $(SERVICE_DIR)service/service_test.o \
                 $(SERVICE_DIR)service/test_engine.o \
@@ -1025,3 +1024,73 @@ $(MODULE_NAME)-objs  += $(NAN_SEC_OBJS)
 ifneq ($(findstring UT_TEST_MODE,$(MTK_COMBO_CHIP)),)
 include $(src)/test/ut.make
 endif
+
+ifneq ($(findstring 96801,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_BOARD_HAS_W1_OPTION_H
+endif
+ifneq ($(findstring 96806,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_BOARD_HAS_W1_OPTION_H
+endif
+
+ifneq ($(findstring a22,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_BOARD_HAS_W1_OPTION_H
+endif
+ifneq ($(findstring 96902,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96902AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmsq,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96902AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmcs,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96902AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmtfn,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96902AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmue,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96902AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring 96901AA1,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring 96901WA1,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmzh,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmxx,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmeea,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a14xmtur,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96901AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring 96818AA1,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring 96818BA1,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a05mxx,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a05mins,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a05mtur,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a05mser,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring a05mub,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_MTK_S96818AA1_DOMAIN_PWR
+endif
+ifneq ($(findstring f42,$(TARGET_PRODUCT)),)
+    ccflags-y += -DCONFIG_BOARD_HAS_W1_OPTION_H
+endif
+
+## ^^^ ignore if not necessary ^^^ ##

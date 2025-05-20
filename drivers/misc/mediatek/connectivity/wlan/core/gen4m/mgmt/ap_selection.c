@@ -765,7 +765,6 @@ static u_int8_t scanSanityCheckBssDesc(struct ADAPTER *prAdapter,
 	   (prAisBssInfo->eConnectionState == MEDIA_STATE_CONNECTED ||
 	    aisFsmIsInProcessPostpone(prAdapter, ucBssIndex))) {
 		int32_t r1, r2;
-		uint8_t ucBand;
 
 		r1 = RCPI_TO_dBm(target->ucRCPI);
 		r2 = RCPI_TO_dBm(prBssDesc->ucRCPI);
@@ -803,13 +802,6 @@ static u_int8_t scanSanityCheckBssDesc(struct ADAPTER *prAdapter,
 			break;
 		}
 
-		ucBand = (uint8_t) prBssDesc->eBand;
-		if (ucBand >= BAND_NUM) {
-			log_dbg(SCN, WARN,
-			       "Invalid Band %d\n", ucBand);
-			return FALSE;
-		}
-
 #if CFG_SUPPORT_NCHO
 		if (prAdapter->rNchoInfo.fgNCHOEnabled) {
 			if (!(BIT(prBssDesc->eBand) &
@@ -817,7 +809,7 @@ static u_int8_t scanSanityCheckBssDesc(struct ADAPTER *prAdapter,
 				log_dbg(SCN, WARN,
 				MACSTR" band(%s) is not in NCHO roam band\n",
 				MAC2STR(prBssDesc->aucBSSID),
-				apucBandStr[ucBand]);
+				apucBandStr[prBssDesc->eBand]);
 				return FALSE;
 			}
 		}
@@ -1174,12 +1166,6 @@ uint16_t scanCalculateScoreByBlockList(struct ADAPTER *prAdapter,
 	    struct BSS_DESC *prBssDesc, enum ROAM_TYPE eRoamType)
 {
 	uint16_t u2Score = 0;
-	uint8_t ucRoamType = (uint8_t) eRoamType;
-
-	if (ucRoamType >= ROAM_TYPE_NUM) {
-		log_dbg(SCN, WARN, "Invalid roam type %d!\n", ucRoamType);
-		return u2Score;
-	}
 
 	if (!prBssDesc->prBlack)
 		u2Score = 100;
@@ -1190,7 +1176,7 @@ uint16_t scanCalculateScoreByBlockList(struct ADAPTER *prAdapter,
 	else
 		u2Score = 100 - prBssDesc->prBlack->ucCount * 10;
 
-	return u2Score * gasMtkWeightConfig[ucRoamType].ucBlackListWeight;
+	return u2Score * gasMtkWeightConfig[eRoamType].ucBlackListWeight;
 }
 
 uint16_t scanCalculateScoreByTput(struct ADAPTER *prAdapter,
@@ -1445,7 +1431,6 @@ uint32_t apSelectionCalculateScore(struct ADAPTER *prAdapter,
 	uint32_t u4Score = 0;
 	struct ROAMING_INFO *prRoamingFsmInfo = NULL;
 	uint8_t fgIsGBandCoex = FALSE;
-	uint8_t ucBand;
 
 	prRoamingFsmInfo = aisGetRoamingInfo(prAdapter, ucBssIndex);
 
@@ -1456,12 +1441,6 @@ uint32_t apSelectionCalculateScore(struct ADAPTER *prAdapter,
 
 	if (!prBssDesc) {
 		log_dbg(SCN, INFO, "Invalid BssDesc");
-		return u4Score;
-	}
-
-	ucBand = (uint8_t) prBssDesc->eBand;
-	if (ucBand >= BAND_NUM) {
-		log_dbg(SCN, WARN, "Invalid Band %d\n", ucBand);
 		return u4Score;
 	}
 
@@ -1482,7 +1461,7 @@ uint32_t apSelectionCalculateScore(struct ADAPTER *prAdapter,
 		u4Score,
 		prBssDesc->u4RssiFactor,
 		prBssDesc->u4CUFactor,
-		apucBandStr[ucBand],
+		apucBandStr[prBssDesc->eBand],
 		fgIsGBandCoex,
 		RCPI_TO_dBm(prBssDesc->ucRCPI),
 		prBssDesc->ucChnlUtilization);
@@ -1661,7 +1640,6 @@ void apSelectionEstimateBssTput(struct BSS_DESC *prBssDesc,
 	uint8_t ucATF = 127, ucBaSize = 32, ucPpduDuration = 5;
 	uint8_t fgHaveCUInfo = FALSE;
 	uint8_t *pucIEs = NULL;
-	uint8_t ucIEBaSize;
 
 	/* Check if any CU info in the same channel */
 	if (prCUInfoByFreq[prBssDesc->ucChannelNum].ucTotalApHaveCu)
@@ -1672,10 +1650,7 @@ void apSelectionEstimateBssTput(struct BSS_DESC *prBssDesc,
 
 	if (prBssDesc->fgExistEspIE) {
 		pucIEs = (uint8_t *) &prBssDesc->u4EspInfo[WIFI_AC_BE];
-
-		ucIEBaSize = (uint8_t)((pucIEs[1] & 0xE0) >> 5);
-		if (ucIEBaSize < sizeof(aucBaSizeTranslate))
-			ucBaSize = aucBaSizeTranslate[ucIEBaSize];
+		ucBaSize = aucBaSizeTranslate[(pucIEs[1] & 0xE0) >> 5];
 		ucATF = pucIEs[1];
 		ucPpduDuration = pucIEs[2];
 		prBssDesc->u4EstimatedTputByEsp = apSelectionGetExpectedTput(
@@ -1815,15 +1790,11 @@ struct BSS_DESC *apSelectionSelectBss(struct ADAPTER *prAdapter,
 		LINK_FOR_EACH_ENTRY(prBssDesc, prCandidates,
 			rLinkEntryEss1[ucBssIndex], struct BSS_DESC) {
 			if (prSelectedBssDesc == NULL) {
-				uint8_t ucBand = (uint8_t) prBssDesc->eBand;
 				uint8_t fgIsCoex = fgIsGBandCoex &&
 						prBssDesc->eBand == BAND_2G4;
 				uint32_t u4Tput = ucIsAllAPsHaveESP ?
 					prBssDesc->u4EstimatedTputByEsp :
 					prBssDesc->u4EstimatedTputByCu;
-				if (ucBand >= BAND_NUM)
-					continue;
-
 				if (fgIsCoex)
 					u4Tput = (u4Tput * 70 / 100);
 
@@ -1840,7 +1811,7 @@ struct BSS_DESC *apSelectionSelectBss(struct ADAPTER *prAdapter,
 					prSelectedBssDesc->fgIsRWMValid,
 					prSelectedBssDesc->u2ReducedWanMetrics,
 					RCPI_TO_dBm(prBssDesc->ucRCPI),
-					apucBandStr[ucBand],
+					apucBandStr[prBssDesc->eBand],
 					prBssDesc->u4RssiFactor,
 					prBssDesc->u4CUFactor);
 				else
@@ -1853,7 +1824,7 @@ struct BSS_DESC *apSelectionSelectBss(struct ADAPTER *prAdapter,
 					prBssDesc->u2AMsduByte,
 					prBssDesc->ucPpduDuration,
 					RCPI_TO_dBm(prBssDesc->ucRCPI),
-					apucBandStr[ucBand],
+					apucBandStr[prBssDesc->eBand],
 					prBssDesc->u4RssiFactor,
 					prBssDesc->u4CUFactor);
 
@@ -2042,7 +2013,7 @@ struct BSS_DESC *scanSearchBssDescForRoam(struct ADAPTER *prAdapter,
 	uint8_t fgSearchBlackList = FALSE;
 
 	if (!prAdapter ||
-	    eRoamReason >= ROAMING_REASON_NUM) {
+	    eRoamReason >= ROAMING_REASON_NUM || eRoamReason < 0) {
 		log_dbg(SCN, ERROR,
 			"prAdapter %p, reason %d!\n", prAdapter, eRoamReason);
 		return NULL;
@@ -2184,7 +2155,7 @@ struct BSS_DESC *scanSearchBssDescByScoreForAis(struct ADAPTER *prAdapter,
 #endif
 
 	if (!prAdapter ||
-	    eRoamReason >= ROAMING_REASON_NUM) {
+	    eRoamReason >= ROAMING_REASON_NUM || eRoamReason < 0) {
 		log_dbg(SCN, ERROR,
 			"prAdapter %p, reason %d!\n", prAdapter, eRoamReason);
 		return NULL;

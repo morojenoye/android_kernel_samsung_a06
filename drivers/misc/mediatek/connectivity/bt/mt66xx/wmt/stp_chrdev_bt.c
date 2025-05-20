@@ -4,7 +4,6 @@
  */
 
 #include "bt.h"
-#include "btmtk_dbg_tp_evt_if.h"
 #include <linux/pm_wakeup.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
@@ -318,9 +317,6 @@ static VOID bt_cdev_rst_cb(ENUM_WMTDRV_TYPE_T src,
 	if ((src == WMTDRV_TYPE_WMT) && (dst == WMTDRV_TYPE_BT) && (type == WMTMSG_TYPE_RESET)) {
 		switch (rst_msg) {
 		case WMTRSTMSG_RESET_START:
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-			bt_state_notify(OFF);
-#endif
 			BT_LOG_PRT_INFO("Whole chip reset start!\n");
 			rstflag = 1;
 			break;
@@ -399,8 +395,7 @@ static VOID BT_event_cb(VOID)
 unsigned int BT_poll(struct file *filp, poll_table *wait)
 {
 	UINT32 mask = 0;
-
-	//bt_dbg_tp_evt(TP_ACT_POLL, 0, 0, NULL);
+	
 	if ((mtk_wcn_stp_is_rxqueue_empty(BT_TASK_INDX) && rstflag == 0) ||
 	    (rstflag == 1) || (rstflag == 3)) {
 		/*
@@ -430,12 +425,8 @@ unsigned int BT_poll(struct file *filp, poll_table *wait)
 
 static ssize_t __bt_write(const PUINT8 buffer, size_t count)
 {
-	INT32 retval = 0;
-
-	bt_dbg_tp_evt(TP_ACT_WR_IN, 0, count, buffer);
-	retval = mtk_wcn_stp_send_data(buffer, count, BT_TASK_INDX);
-	bt_dbg_tp_evt(TP_ACT_WR_OUT, 0, count, buffer);
-
+	INT32 retval = mtk_wcn_stp_send_data(buffer, count, BT_TASK_INDX);
+	
 	if (retval < 0)
 		BT_LOG_PRT_ERR("mtk_wcn_stp_send_data fail, retval %d\n", retval);
 	else if (retval == 0) {
@@ -548,7 +539,6 @@ ssize_t BT_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos
 {
 	INT32 retval = 0;
 
-	bt_dbg_tp_evt(TP_ACT_RD_IN, 0, count, NULL);
 	ftrace_print("%s get called, count %zu", __func__, count);
 	down(&rd_mtx);
 
@@ -618,7 +608,6 @@ ssize_t BT_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos
 				g_bt_dbg_st.trx_cb(i_buf, retval);
 			}
 			//BT_LOG_PRT_DBG("Read bytes %d\n", retval);
-			bt_dbg_tp_evt(TP_ACT_RD_OUT, 0, retval, i_buf);
 			BT_LOG_PRT_DBG_RAW(i_buf, retval, "%s: len[%d], RX: ", __func__, retval);
 			break;
 		}
@@ -751,7 +740,6 @@ static int BT_open(struct inode *inode, struct file *file)
 		return -EIO;
 	}
 
-	bt_dbg_tp_evt(TP_ACT_PWR_ON, 0, 0, NULL);
 	BT_LOG_PRT_INFO("major %d minor %d (pid %d)\n", imajor(inode), iminor(inode), current->pid);
 
 	/* Turn on BT */
@@ -786,10 +774,6 @@ static int BT_open(struct inode *inode, struct file *file)
 
 	sema_init(&wr_mtx, 1);
 	sema_init(&rd_mtx, 1);
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	bt_state_notify(ON);
-#endif
 	bt_dev_dbg_set_state(TRUE);
 
 	if(pm_qos_support) {
@@ -819,14 +803,10 @@ static int BT_open(struct inode *inode, struct file *file)
 static int BT_close(struct inode *inode, struct file *file)
 {
 	BT_LOG_PRT_INFO("major %d minor %d (pid %d)\n", imajor(inode), iminor(inode), current->pid);
-	bt_dbg_tp_evt(TP_ACT_PWR_OFF, 0, 0, NULL);
 
 	bthost_debug_init();
 	bt_pm_notify_unregister();
 	bt_dev_dbg_set_state(FALSE);
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	bt_state_notify(OFF);
-#endif
 
 	rstflag = 0;
 	bt_ftrace_flag = 0;
@@ -920,9 +900,6 @@ static int BT_init(void)
 
 	BT_LOG_PRT_INFO("%s driver(major %d) installed\n", BT_DRIVER_NAME, BT_major);
 
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	fw_log_bt_init();
-#endif
 	bt_dev_dbg_init();
 
 	pm_qos_set_feature();
@@ -970,9 +947,6 @@ static void BT_exit(void)
 	}
 
 	bt_dev_dbg_deinit();
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	fw_log_bt_exit();
-#endif
 
 	dev = MKDEV(BT_major, 0);
 	/* Destroy wake lock*/
@@ -995,8 +969,6 @@ static void BT_exit(void)
 	BT_LOG_PRT_INFO("%s driver removed\n", BT_DRIVER_NAME);
 }
 
-#ifdef MTK_WCN_REMOVE_KERNEL_MODULE
-
 int mtk_wcn_stpbt_drv_init(void)
 {
 	return BT_init();
@@ -1008,10 +980,3 @@ void mtk_wcn_stpbt_drv_exit(void)
 	return BT_exit();
 }
 EXPORT_SYMBOL(mtk_wcn_stpbt_drv_exit);
-
-#else
-
-module_init(BT_init);
-module_exit(BT_exit);
-
-#endif

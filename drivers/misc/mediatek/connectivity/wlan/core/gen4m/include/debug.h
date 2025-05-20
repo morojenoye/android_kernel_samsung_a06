@@ -71,7 +71,9 @@
 #define BUILD_QA_DBG 0
 #endif
 
+#ifndef DBG_DISABLE_ALL_LOG
 #define DBG_DISABLE_ALL_LOG             0
+#endif
 
 /*******************************************************************************
  *                    E X T E R N A L   R E F E R E N C E S
@@ -646,11 +648,13 @@ enum WAKE_DATA_TYPE {
  * #endif
  */
 #if DBG_DISABLE_ALL_LOG
-#define DBGLOG(_Module, _Class, _Fmt)
-#define DBGLOG_LIMITED(_Module, _Class, _Fmt)
-#define DBGLOG_HEX(_Module, _Class, _StartAddr, _Length)
-#define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length)
-#define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length)
+#define DBGLOG(_Mod, _Clz, _Fmt, ...)
+#define DBGLOG_LIMITED(_Mod, _Clz, _Fmt, ...)
+#define DBGFWLOG(_Mod, _Clz, _Fmt, ...)
+#define TOOL_PRINTLOG(_Mod, _Clz, _Fmt, ...)
+#define DBGLOG_HEX(_Mod, _Clz, _Adr, _Len)
+#define DBGLOG_MEM8(_Mod, _Clz, _Adr, _Len)
+#define DBGLOG_MEM32(_Mod, _Clz, _Adr, _Len)
 #else
 #define DBGLOG(_Mod, _Clz, _Fmt, ...) \
 	do { \

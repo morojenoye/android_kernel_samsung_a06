@@ -1075,34 +1075,8 @@ void wlanOnPostFirmwareReady(IN struct ADAPTER *prAdapter,
 	/* Check hardware 5g band support */
 	if (prAdapter->fgIsHw5GBandDisabled)
 		prAdapter->fgEnable5GBand = FALSE;
-	else {
-/* hs04  code for DEVAL6398A-9 by meibo at 2022/07/05 start*/
-#ifdef CONFIG_HQ_PROJECT_HS03S
-			prAdapter->fgEnable5GBand = FALSE;
-			DBGLOG(INIT, INFO,"This project not support 5G!\n");
-#endif
-#ifdef CONFIG_HQ_PROJECT_HS04
-			prAdapter->fgEnable5GBand = FALSE;
-			DBGLOG(INIT, INFO,"This project not support 5G!\n");
-#endif
-#ifdef CONFIG_HQ_PROJECT_OT8
-			prAdapter->fgEnable5GBand = TRUE;
-			DBGLOG(INIT, INFO,"This project support 5G!\n");
-#endif
-/* hs04  code for DEVAL6398A-9 by meibo at 2022/07/05 end*/
-/*hs14 code for SR-AL6528A-01-733 by meibo at 2022/09/21 start*/
-#ifdef CONFIG_HQ_PROJECT_O22
-            prAdapter->fgEnable5GBand = TRUE;
-            DBGLOG(INIT, INFO,"This project support 5G!\n");
-#endif
-/*hs14 code for SR-AL6528A-01-733 by meibo at 2022/09/21 end*/
-/*a06 code for SR-AL7160A-01-563 by WangAoLong at 2024/03/22 start*/
-#ifdef CONFIG_HQ_PROJECT_O8
-            prAdapter->fgEnable5GBand = TRUE;
-            DBGLOG(INIT, INFO,"This project support 5G!\n");
-#endif
-/*a06 code for SR-AL7160A-01-563 by WangAoLong at 2024/03/22 end*/
-	}
+	else
+		prAdapter->fgEnable5GBand = TRUE;
 
 #if CFG_SUPPORT_NVRAM
 	/* load manufacture data */
@@ -5207,32 +5181,11 @@ uint32_t wlanLoadManufactureData(IN struct ADAPTER
 	/* 3. Check if needs to support 5GHz */
 	if (prRegInfo->ucEnable5GBand) {
 		/* check if it is disabled by hardware */
-		/*hs03s code for P210616-02745 by lijun at 2021/07/14 start*/
 		if (prAdapter->fgIsHw5GBandDisabled
 		    || prRegInfo->ucSupport5GBand == 0)
 			prAdapter->fgEnable5GBand = FALSE;
-		else {
-/* hs04  code for DEVAL6398A-9 by meibo at 2022/07/05 start*/
-#ifdef CONFIG_HQ_PROJECT_HS03S
-			prAdapter->fgEnable5GBand = FALSE;
-			DBGLOG(INIT, INFO,"This project not support 5G!\n");
-#endif
-#ifdef CONFIG_HQ_PROJECT_HS04
-			prAdapter->fgEnable5GBand = FALSE;
-			DBGLOG(INIT, INFO,"This project not support 5G!\n");
-#endif
-#ifdef CONFIG_HQ_PROJECT_OT8
+		else
 			prAdapter->fgEnable5GBand = TRUE;
-			DBGLOG(INIT, INFO,"This project support 5G!\n");
-#endif
-/* hs04  code for DEVAL6398A-9 by meibo at 2022/07/05 end*/
-/*hs14 code for SR-AL6528A-01-733 by meibo at 2022/09/21 start*/
-#ifdef CONFIG_HQ_PROJECT_O22
-                    prAdapter->fgEnable5GBand = TRUE;
-                    DBGLOG(INIT, INFO,"This project support 5G!\n");
-#endif
-/*hs14 code for SR-AL6528A-01-733  by meibo at 2022/09/21 end*/
-		}
 	} else
 		prAdapter->fgEnable5GBand = FALSE;
 
@@ -7557,8 +7510,6 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prWifiVar->ucGbandProbe256QAM = (uint8_t) wlanCfgGetUint32(
 					prAdapter, "Probe256QAM",
 					FEATURE_ENABLED);
-	prWifiVar->ucCustomerOui = (uint8_t) wlanCfgGetUint32(
-			prAdapter, "CustomerOui", FEATURE_ENABLED);
 #endif
 #if CFG_SUPPORT_VHT_IE_IN_2G
 	prWifiVar->ucVhtIeIn2g = (uint8_t) wlanCfgGetUint32(
@@ -13859,10 +13810,6 @@ TpeEndFlush:
 
 void wlanSetConnsysFwLog(IN struct ADAPTER *prAdapter)
 {
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	struct CMD_CONNSYS_FW_LOG rFwLogCmd;
-	uint32_t u4BufLen;
-#endif
 	int32_t u4LogLevel = ENUM_WIFI_LOG_LEVEL_DEFAULT;
 
 	/* Enable FW log */
@@ -13873,31 +13820,6 @@ void wlanSetConnsysFwLog(IN struct ADAPTER *prAdapter)
 			ENUM_WIFI_LOG_LEVEL_VERSION_V1,
 			ENUM_WIFI_LOG_MODULE_FW,
 			u4LogLevel, TRUE);
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	kalMemZero(&rFwLogCmd, sizeof(rFwLogCmd));
-
-	rFwLogCmd.fgCmd = (int)FW_LOG_CMD_ON_OFF;
-	rFwLogCmd.fgValue = getFWLogOnOff();
-	rFwLogCmd.fgEarlySet = TRUE;
-
-	connsysFwLogControl(prAdapter,
-		&rFwLogCmd,
-		sizeof(struct CMD_CONNSYS_FW_LOG),
-		&u4BufLen);
-
-	if (getFWLogLevel() != -1) {
-		rFwLogCmd.fgCmd =
-			(int)FW_LOG_CMD_SET_LEVEL;
-		rFwLogCmd.fgValue = getFWLogLevel();
-		rFwLogCmd.fgEarlySet = TRUE;
-
-		connsysFwLogControl(prAdapter,
-		&rFwLogCmd,
-		sizeof(struct CMD_CONNSYS_FW_LOG),
-		&u4BufLen);
-	}
-#endif
 
 }
 

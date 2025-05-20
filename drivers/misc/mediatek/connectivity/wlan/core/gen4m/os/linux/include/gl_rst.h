@@ -258,7 +258,7 @@ extern uint32_t g_u4Memdump;
 #define GL_COREDUMP_TRIGGER(_prAdapter)	\
 { \
 	wlanoidSerExtCmd(_prAdapter, SER_ACTION_RECOVER, \
-					SER_SET_L0_RECOVER, 0); \
+					SER_SET_L0_RECOVER, 0, FALSE); \
 }
 
 #if CFG_CHIP_RESET_SUPPORT

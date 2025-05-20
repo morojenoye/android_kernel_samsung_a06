@@ -378,8 +378,6 @@
 
 /* 15.4.8.5 802.11k RCPI-dBm mapping*/
 #define NDBM_LOW_BOUND_FOR_RCPI                 110
-#define RSSI_LOW_BOUND                          -110
-#define RSSI_HIGH_BOUND                         0
 #define RCPI_LOW_BOUND                          0
 #define RCPI_HIGH_BOUND                         220
 #define RCPI_MEASUREMENT_NOT_AVAILABLE          255
@@ -908,10 +906,6 @@
 #define STATUS_CODE_ASSOC_DENIED_LARGE_LIS_INTERVAL 51
 /* Invalid pairwise master key identifier (PMKID) */
 #define STATUS_INVALID_PMKID                        53
-/* SAE auth uses the hash-to-element method, instead of
- * looping, to obtain the PWE.
- */
-#define STATUS_SAE_HASH_TO_ELEMENT		    126
 
 /* proprietary definition of reserved field of Status Code */
 /* Join failure */
@@ -1888,14 +1882,6 @@ enum BEACON_REPORT_DETAIL {
 /* MTK Vendor Specific OUI */
 #define ELEM_MIN_LEN_MTK_OUI                        7
 #define VENDOR_OUI_MTK                              { 0x00, 0x0C, 0xE7 }
-
-#define ELEM_MIN_LEN_CUSTOMER1_OUI		5
-#define VENDOR_OUI_CUSTOMER1		{ 0x00, 0x16, 0x32 }
-#define VENDOR_OUI_TYPE_CUSTOMER1		0x80
-#define ELEM_MIN_LEN_CUSTOMER2_OUI		4
-#define VENDOR_OUI_CUSTOMER2		{ 0x00, 0x00, 0x0F }
-#define VENDOR_OUI_TYPE_CUSTOMER2		0xFE
-
 #define MTK_SYNERGY_CAP_SUPPORT_24G_MCS89           BIT(3)
 #define MTK_SYNERGY_CAP_SUPPORT_24G_MCS89_PROBING	BIT(4)
 #define MTK_SYNERGY_CAP0 \
@@ -3660,13 +3646,6 @@ struct IE_MTK_OUI {
 	uint8_t aucInfoElem[1];
 } __KAL_ATTRIB_PACKED__;
 
-struct IE_CUSTOMER_OUI {
-	uint8_t ucId;
-	uint8_t ucLength;
-	uint8_t aucOui[3];
-	uint8_t ucOuiType;
-} __KAL_ATTRIB_PACKED__;
-
 #if CFG_SUPPORT_ASSURANCE
 struct IE_ASSURANCE_ROAMING_REASON {
 	uint8_t ucId;
@@ -4116,8 +4095,6 @@ struct RSNX_INFO_ELEM {
 #define QUIET_IE(fp)            ((struct IE_QUIET *) fp)
 
 #define MTK_OUI_IE(fp)          ((struct IE_MTK_OUI *) fp)
-
-#define CUSTOMER_OUI_IE(fp)          ((struct IE_CUSTOMER_OUI *) fp)
 
 #define CSA_IE(fp)              ((struct IE_CHANNEL_SWITCH *) fp)
 #define SEC_OFFSET_IE(fp)	((struct IE_SECONDARY_OFFSET *) fp)

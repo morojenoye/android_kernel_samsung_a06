@@ -942,10 +942,6 @@ void aisFsmStateInit_JOIN(IN struct ADAPTER *prAdapter,
 		    TX_AUTH_ASSOCI_RETRY_LIMIT_FOR_ROAMING;
 	}
 
-	DBGLOG(AIS, INFO, "JOIN INIT: eAuthMode[%d] AvailableAuthTypes[%d]\n",
-		prConnSettings->eAuthMode,
-		prAisFsmInfo->ucAvailableAuthTypes);
-
 	/* 4 <4> Use an appropriate Authentication Algorithm
 	 * Number among the ucAvailableAuthTypes
 	 *
@@ -1047,12 +1043,12 @@ u_int8_t aisFsmStateInit_RetryJOIN(IN struct ADAPTER *prAdapter,
 	struct AIS_FSM_INFO *prAisFsmInfo;
 	struct MSG_SAA_FSM_START *prJoinReqMsg;
 	struct CONNECTION_SETTINGS *prConnSettings;
-
-	DEBUGFUNC("aisFsmStateInit_RetryJOIN()");
+        struct GL_WPA_INFO *prWpaInfo;
+        DEBUGFUNC("aisFsmStateInit_RetryJOIN()");
 
 	prAisFsmInfo = aisGetAisFsmInfo(prAdapter, ucBssIndex);
 	prConnSettings = aisGetConnSettings(prAdapter, ucBssIndex);
-
+    prWpaInfo = aisGetWpaInfo(prAdapter, ucBssIndex);
 	/* Retry other AuthType if possible */
 	if (!prAisFsmInfo->ucAvailableAuthTypes)
 		return FALSE;
@@ -1070,6 +1066,20 @@ u_int8_t aisFsmStateInit_RetryJOIN(IN struct ADAPTER *prAdapter,
 		prAisFsmInfo->ucAvailableAuthTypes = 0;
 		return FALSE;
 	}
+#if CFG_SUPPORT_802_11W
+	if (prStaRec->u2StatusCode ==
+			STATUS_CODE_ROBUST_MGMT_FRAME_POLICY_VIOLATION) {
+		if (kalGetRsnIeMfpCap(prAdapter->prGlueInfo, ucBssIndex) ==
+				RSN_AUTH_MFP_REQUIRED)
+			prWpaInfo->ucRSNMfpCap = RSN_AUTH_MFP_OPTIONAL;
+		else
+			prWpaInfo->ucRSNMfpCap = RSN_AUTH_MFP_REQUIRED;
+
+		DBGLOG(AIS, INFO,
+			"RETRY JOIN INIT: Retry Authentication with ucRSNMfpCap == %d.\n",
+			prWpaInfo->ucRSNMfpCap);
+	}
+#endif
 
 	if (prConnSettings->rRsnInfo.au4AuthKeyMgtSuite[0]
 		== WLAN_AKM_SUITE_SAE &&
@@ -3478,6 +3488,14 @@ uint8_t aisHandleJoinFailure(IN struct ADAPTER *prAdapter,
 		 * , or AP block STA
 		 */
 		eNextState = AIS_STATE_JOIN_FAILURE;
+#if CFG_TC10_FEATURE
+				} else if (prStaRec->u2ReasonCode ==
+						REASON_CODE_PREV_AUTH_INVALID) {
+					/* Receive DEAUTH instead of ASSOC
+					 * RESP, stop JOIN
+					 */
+					eNextState = AIS_STATE_JOIN_FAILURE;
+#endif
 	} else {
 		/* 4.b send reconnect request */
 		aisFsmInsertRequest(prAdapter,
@@ -4812,9 +4830,6 @@ void aisFsmDisconnect(IN struct ADAPTER *prAdapter,
 	cnmTimerStopTimer(prAdapter,
 		aisGetSecModeChangeTimer(prAdapter, ucBssIndex));
 #endif
-#if CFG_SUPPORT_DFS
-	cnmTimerStopTimer(prAdapter, &prAisBssInfo->rCsaTimer);
-#endif
 	nicPmIndicateBssAbort(prAdapter, prAisBssInfo->ucBssIndex);
 
 #if CFG_SUPPORT_ADHOC
@@ -6018,7 +6033,6 @@ void aisFsmRoamingDisconnectPrevAP(IN struct ADAPTER *prAdapter,
 		struct PARAM_SSID rSsid;
 		struct BSS_DESC *prBssDesc = NULL;
 
-		kalMemZero(&rSsid, sizeof(struct PARAM_SSID));
 		COPY_SSID(rSsid.aucSsid, rSsid.u4SsidLen, prAisBssInfo->aucSSID,
 			  prAisBssInfo->ucSSIDLen);
 		prBssDesc =
@@ -8123,9 +8137,7 @@ void aisReqJoinChPrivilegeForCSA(struct ADAPTER *prAdapter,
 
 		mboxSendMsg(prAdapter, MBOX_ID_0,
 				(struct MSG_HDR *)prMsgChReq,
-				MSG_SEND_METHOD_UNBUF);
-
-		prAisFsmInfo->fgIsChannelRequested = TRUE;
+				MSG_SEND_METHOD_BUF);
 }				/* end of aisReqJoinChPrivilegeForCSA() */
 
 /*----------------------------------------------------------------------------*/

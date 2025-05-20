@@ -105,15 +105,15 @@
 #include "gl_sys.h"
 #include "fw_dl.h"
 
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/18 start */
-#define WIFI_MAC_ADDRESS_FILE "/efs/wifi/.mac.info"
+/* Changes for MAC Address issue start */
+#define WIFI_MAC_ADDRESS_FILE "efs/wifi/.mac.info"
 #define WIFI_MAC_ADDRESS_STR_LEN 17
 #ifdef MODULE
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
 #else
 #define WLAN_MODULE_NAME  "wlan"
 #endif
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/22 end */
+/* Changes for MAC Address issue end */
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -1649,7 +1649,8 @@ u16 wlanSelectQueue(struct net_device *dev,
 	return mtk_wlan_ndev_select_queue(dev, skb);
 }
 #endif
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/18 start */
+
+/* Changes for MAC Address issue start */
 uint8_t char2Hex(uint8_t mByte)
 {
     uint8_t temp = 0x0;
@@ -1737,7 +1738,7 @@ void fetch_vendor_addr(struct REG_INFO *prRegInfo)
     print_nv_data("prRegInfo",prRegInfo->aucMacAddr,sizeof(prRegInfo->aucMacAddr));
 }
 
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/22 end */
+/* Changes for MAC Address issue end */
 
 /*----------------------------------------------------------------------------*/
 /*!
@@ -1777,26 +1778,26 @@ static void glLoadNvram(struct GLUE_INFO *prGlueInfo,
 	prRegInfo->prNvramSettings =
 		(struct WIFI_CFG_PARAM_STRUCT *)&g_aucNvram[0];
 	prNvramSettings = prRegInfo->prNvramSettings;
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/18 start */
+/* Changes for MAC Address issue start */
         fetch_vendor_addr(prRegInfo);
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/22 end */
+/* Changes for MAC Address issue end */
 #if CFG_TC1_FEATURE
 		TC1_FAC_NAME(FacReadWifiMacAddr)(prRegInfo->aucMacAddr);
 		DBGLOG(INIT, INFO,
 			"MAC address: " MACSTR, MAC2STR(prRegInfo->aucMacAddr));
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/18 start */
+/* Changes for MAC Address issue start */
 		DBGLOG(INIT, INFO,"Read MAC addr from prRegInfo");
 		print_nv_data("prRegInfo",prRegInfo->aucMacAddr,sizeof(prRegInfo->aucMacAddr));
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/22 end */
+/* Changes for MAC Address issue end */
 #else
 	/* load MAC Address */
 	kalMemCopy(prRegInfo->aucMacAddr,
 			prNvramSettings->aucMacAddress,
 			PARAM_MAC_ADDR_LEN*sizeof(uint8_t));
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/18 start */
+/* Changes for MAC Address issue start */
 	DBGLOG(INIT, INFO,"Copy MAC addr from prNvramSettings");
 	print_nv_data("prNvramSettings",prNvramSettings->aucMacAddress,sizeof(prNvramSettings->aucMacAddress));
-/* TabA7 Lite code for SR-AX3565-01-276 by huanglei at 2020/12/22 end */
+/* Changes for MAC Address issue end */
 #endif
 		/* load country code */
 		/* cast to wide characters */
@@ -4231,18 +4232,8 @@ int set_p2p_mode_handler(struct net_device *netdev,
 	}
 #endif /*CFG_MTK_ANDROID_WMT*/
 
-#if CFG_SUPPORT_NAN
-	DBGLOG(INIT, INFO, "Mode = %d %d\n",
-		prGlueInfo->prAdapter->fgIsNANRegistered,
-		p2pmode.u4Enable);
-#endif
-
 	/* Remember original ifindex for reset case */
-	if (kalIsResetting()
-#if CFG_SUPPORT_NAN
-		|| !p2pmode.u4Enable
-#endif
-		) {
+	if (kalIsResetting()) {
 		struct GL_P2P_INFO *prP2PInfo = NULL;
 		int i = 0;
 
@@ -4260,9 +4251,6 @@ int set_p2p_mode_handler(struct net_device *netdev,
 
 			g_u4DevIdx[i] =
 				prP2PInfo->aprRoleHandler->ifindex;
-#if CFG_SUPPORT_NAN
-			DBGLOG(INIT, INFO, "Restore ifindex\n");
-#endif
 		}
 
 		if (prGlueInfo->prAdapter->rWifiVar.u4RegP2pIfAtProbe) {
@@ -4849,313 +4837,6 @@ uint32_t wlanServiceExit(struct GLUE_INFO *prGlueInfo)
 }
 #endif
 
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-
-#if (CFG_SUPPORT_ICS == 1)
-#define ICS_LOG_CMD_ON_OFF        0
-#define ICS_LOG_CMD_SET_LEVEL     1
-
-enum ENUM_ICS_LOG_LEVEL_T {
-	ENUM_ICS_LOG_LEVEL_DISABLE,
-	ENUM_ICS_LOG_LEVEL_MAC,
-};
-
-static uint32_t u4IcsLogOnOffCache;
-static uint32_t u4IcsLogLevelCache = ENUM_ICS_LOG_LEVEL_MAC;
-#endif /* CFG_SUPPORT_ICS */
-
-static uint32_t u4LogOnOffCache;
-static uint32_t u4LogLevelCache = -1;
-
-uint32_t getFWLogOnOff(void)
-{
-	return u4LogOnOffCache;
-}
-
-uint32_t getFWLogLevel(void)
-{
-	return u4LogLevelCache;
-}
-
-uint32_t
-connsysFwLogControl(struct ADAPTER *prAdapter, void *pvSetBuffer,
-	uint32_t u4SetBufferLen, uint32_t *pu4SetInfoLen)
-{
-	struct CMD_CONNSYS_FW_LOG *prCmd;
-	struct CMD_HEADER rCmdV1Header;
-	struct CMD_FORMAT_V1 rCmd_v1;
-	uint32_t rStatus = WLAN_STATUS_SUCCESS;
-
-	if ((prAdapter == NULL) || (pvSetBuffer == NULL)
-		|| (pu4SetInfoLen == NULL))
-		return WLAN_STATUS_FAILURE;
-
-	/* init */
-	*pu4SetInfoLen = sizeof(struct CMD_CONNSYS_FW_LOG);
-	prCmd = (struct CMD_CONNSYS_FW_LOG *) pvSetBuffer;
-
-	if (prCmd->fgCmd == FW_LOG_CMD_ON_OFF) {
-
-		/*EvtDrvnLogEn 0/1*/
-		uint8_t onoff[1] = {'0'};
-
-		DBGLOG(INIT, TRACE, "FW_LOG_CMD_ON_OFF\n");
-
-		rCmdV1Header.cmdType = CMD_TYPE_SET;
-		rCmdV1Header.cmdVersion = CMD_VER_1;
-		rCmdV1Header.cmdBufferLen = 0;
-		rCmdV1Header.itemNum = 0;
-
-		kalMemSet(rCmdV1Header.buffer, 0, MAX_CMD_BUFFER_LENGTH);
-		kalMemSet(&rCmd_v1, 0, sizeof(struct CMD_FORMAT_V1));
-
-		rCmd_v1.itemType = ITEM_TYPE_STR;
-
-		/*send string format to firmware */
-		rCmd_v1.itemStringLength = kalStrLen("EnableDbgLog");
-		kalMemZero(rCmd_v1.itemString, MAX_CMD_NAME_MAX_LENGTH);
-		kalMemCopy(rCmd_v1.itemString, "EnableDbgLog",
-			rCmd_v1.itemStringLength);
-
-		if (prCmd->fgValue == 1) /* other cases, send 'OFF=0' */
-			onoff[0] = '1';
-		rCmd_v1.itemValueLength = 1;
-		kalMemZero(rCmd_v1.itemValue, MAX_CMD_VALUE_MAX_LENGTH);
-		kalMemCopy(rCmd_v1.itemValue, &onoff, 1);
-
-		DBGLOG(INIT, INFO, "Send key word (%s) WITH (%s) to firmware\n",
-				rCmd_v1.itemString, rCmd_v1.itemValue);
-
-		kalMemCopy(((struct CMD_FORMAT_V1 *)rCmdV1Header.buffer),
-				&rCmd_v1,  sizeof(struct CMD_FORMAT_V1));
-
-		rCmdV1Header.cmdBufferLen += sizeof(struct CMD_FORMAT_V1);
-		rCmdV1Header.itemNum = 1;
-		prAdapter->fgSetLogOnOff = false;
-
-		if (prCmd->fgEarlySet) {
-			rStatus = wlanSendFwLogControlCmd(prAdapter,
-					CMD_ID_GET_SET_CUSTOMER_CFG,
-					NULL,
-					NULL,
-					sizeof(struct CMD_HEADER),
-					(uint8_t *)&rCmdV1Header);
-		} else {
-			rStatus = wlanSendSetQueryCmd(
-				prAdapter, /* prAdapter */
-				CMD_ID_GET_SET_CUSTOMER_CFG, /* 0x70 */
-				TRUE,  /* fgSetQuery */
-				FALSE, /* fgNeedResp */
-				FALSE, /* fgIsOid */
-				NULL,  /* pfCmdDoneHandler*/
-				NULL,  /* pfCmdTimeoutHandler */
-				sizeof(struct CMD_HEADER),
-				(uint8_t *)&rCmdV1Header, /* pucInfoBuffer */
-				NULL,  /* pvSetQueryBuffer */
-				0      /* u4SetQueryBufferLen */
-			);
-		}
-
-		/* keep in cache */
-		u4LogOnOffCache = prCmd->fgValue;
-
-		if (rStatus != WLAN_STATUS_FAILURE)
-			prAdapter->fgSetLogOnOff = true;
-		else
-			DBGLOG(INIT, INFO, "Log On/Off setting fail!\n");
-	} else if (prCmd->fgCmd == FW_LOG_CMD_SET_LEVEL) {
-		/*ENG_LOAD_OFFSET 1*/
-		/*USERDEBUG_LOAD_OFFSET 2 */
-		/*USER_LOAD_OFFSET 3 */
-		int32_t u4LogLevel = ENUM_WIFI_LOG_LEVEL_DEFAULT;
-
-		DBGLOG(INIT, INFO, "FW_LOG_CMD_SET_LEVEL %d\n", prCmd->fgValue);
-		switch (prCmd->fgValue) {
-		case 0:
-			u4LogLevel = ENUM_WIFI_LOG_LEVEL_DEFAULT;
-			break;
-		case 1:
-			u4LogLevel = ENUM_WIFI_LOG_LEVEL_MORE;
-			break;
-		case 2:
-			u4LogLevel = ENUM_WIFI_LOG_LEVEL_EXTREME;
-			break;
-		default:
-			u4LogLevel = ENUM_WIFI_LOG_LEVEL_DEFAULT;
-			break;
-		}
-		wlanDbgSetLogLevelImpl(prAdapter,
-					   ENUM_WIFI_LOG_LEVEL_VERSION_V1,
-					   ENUM_WIFI_LOG_MODULE_DRIVER,
-					   u4LogLevel);
-
-		if (prCmd->fgEarlySet) {
-			wlanDbgSetLogLevel(prAdapter,
-					   ENUM_WIFI_LOG_LEVEL_VERSION_V1,
-					   ENUM_WIFI_LOG_MODULE_FW,
-					   u4LogLevel, TRUE);
-		} else {
-			wlanDbgSetLogLevelImpl(prAdapter,
-					   ENUM_WIFI_LOG_LEVEL_VERSION_V1,
-					   ENUM_WIFI_LOG_MODULE_FW,
-					   u4LogLevel);
-		}
-
-		/* keep in cache */
-		u4LogLevelCache = prCmd->fgValue;
-	} else {
-		DBGLOG(INIT, INFO, "command can not parse\n");
-	}
-	return WLAN_STATUS_SUCCESS;
-}
-
-#if (CFG_SUPPORT_ICS == 1)
-static void ics_log_event_notification(int cmd, int value)
-{
-	struct net_device *prDev = gPrDev;
-	struct GLUE_INFO *prGlueInfo = NULL;
-	struct ADAPTER *prAdapter = NULL;
-	struct PARAM_CUSTOM_ICS_SNIFFER_INFO_STRUCT rSniffer;
-	uint32_t u4BufLen = 0;
-	uint32_t rStatus = WLAN_STATUS_FAILURE;
-
-	DBGLOG(INIT, INFO, "gPrDev=%p, cmd=%d, value=%d\n",
-		gPrDev, cmd, value);
-
-	/*
-	 * Special code that matches App behavior:
-	 * 1. set ics log level
-	 * 2. set on/off (if fwlog on, then icslog also get on)
-	 */
-	if (cmd == ICS_LOG_CMD_ON_OFF) {
-		u4IcsLogOnOffCache = value;
-		if (u4IcsLogOnOffCache == 1 &&
-			u4IcsLogLevelCache == ENUM_ICS_LOG_LEVEL_DISABLE) {
-			DBGLOG(INIT, WARN, "IcsLv is disable!!!\n");
-			u4IcsLogOnOffCache = 0;
-		}
-	} else if (cmd == ICS_LOG_CMD_SET_LEVEL) {
-		u4IcsLogLevelCache = value;
-		if (u4IcsLogLevelCache == ENUM_ICS_LOG_LEVEL_DISABLE) {
-			DBGLOG(INIT, INFO, "IcsLv set to disable.\n");
-			u4IcsLogOnOffCache = 0;
-		} else {
-			DBGLOG(INIT, INFO, "IcsLv set to MAC ICS.\n");
-			u4IcsLogOnOffCache = 1;
-		}
-	}
-
-	if (kalIsHalted() || !prDev) {
-		DBGLOG(INIT, INFO, "device not ready return");
-		return;
-	}
-
-	prGlueInfo = *((struct GLUE_INFO **) netdev_priv(prDev));
-	if (!prGlueInfo) {
-		DBGLOG(INIT, INFO, "prGlueInfo is NULL return");
-		return;
-	}
-
-	prAdapter = prGlueInfo->prAdapter;
-	if (!prAdapter) {
-		DBGLOG(INIT, INFO, "prAdapter is NULL return");
-		return;
-	}
-
-	if (cmd == ICS_LOG_CMD_ON_OFF || cmd == ICS_LOG_CMD_SET_LEVEL) {
-		kalMemZero(&rSniffer, sizeof(
-			struct PARAM_CUSTOM_ICS_SNIFFER_INFO_STRUCT));
-		rSniffer.ucModule = 2;
-		rSniffer.ucAction = u4IcsLogOnOffCache;
-		rSniffer.ucFilter = 0;
-		rSniffer.ucOperation = 0;
-		rSniffer.ucCondition[0] = 2;
-		rSniffer.ucCondition[1] = 0;
-		rSniffer.ucCondition[2] = 0;
-		rSniffer.ucCondition[3] = 0;
-		rSniffer.ucCondition[4] = 0;
-		rSniffer.ucCondition[5] = 0;
-
-		rStatus = kalIoctl(prGlueInfo,
-			wlanoidSetIcsSniffer,
-			&rSniffer, sizeof(rSniffer),
-			FALSE, FALSE, TRUE, &u4BufLen);
-		if (rStatus != WLAN_STATUS_SUCCESS)
-			DBGLOG(INIT, INFO, "wlanoidSetIcsSniffer failed");
-		DBGLOG(INIT, INFO, "IcsLog[Lv:OnOff]=[%d:%d]\n",
-			u4IcsLogLevelCache, u4IcsLogOnOffCache);
-	} else {
-		DBGLOG(INIT, INFO, "unknown cmd %d\n", cmd);
-	}
-}
-#endif /* CFG_SUPPORT_ICS */
-
-static void consys_log_event_notification(int cmd, int value)
-{
-	struct CMD_CONNSYS_FW_LOG rFwLogCmd;
-	struct GLUE_INFO *prGlueInfo = NULL;
-	struct ADAPTER *prAdapter = NULL;
-	struct net_device *prDev = gPrDev;
-	uint32_t rStatus = WLAN_STATUS_FAILURE;
-	uint32_t u4BufLen;
-
-	DBGLOG(INIT, INFO, "gPrDev=%p, cmd=%d, value=%d\n",
-		gPrDev, cmd, value);
-
-	if (cmd == FW_LOG_CMD_ON_OFF) {
-		u4LogOnOffCache = value;
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-#if (CFG_SUPPORT_CONNINFRA == 1)
-		if (u4LogOnOffCache == 0) {
-			fw_log_wifi_irq_handler();
-			DBGLOG(INIT, TRACE, "Stopping logs...\n");
-		}
-#endif
-#endif
-	}
-	if (cmd == FW_LOG_CMD_SET_LEVEL)
-		u4LogLevelCache = value;
-
-	if (kalIsHalted()) { /* power-off */
-		DBGLOG(INIT, INFO,
-			"Power off return, u4LogOnOffCache=%d\n",
-				u4LogOnOffCache);
-		return;
-	}
-
-	prGlueInfo = (prDev != NULL) ?
-		*((struct GLUE_INFO **) netdev_priv(prDev)) : NULL;
-	DBGLOG(INIT, TRACE, "prGlueInfo=%p\n", prGlueInfo);
-	if (!prGlueInfo) {
-		DBGLOG(INIT, INFO,
-			"prGlueInfo == NULL return, u4LogOnOffCache=%d\n",
-				u4LogOnOffCache);
-		return;
-	}
-	prAdapter = prGlueInfo->prAdapter;
-	DBGLOG(INIT, TRACE, "prAdapter=%p\n", prAdapter);
-	if (!prAdapter) {
-		DBGLOG(INIT, INFO,
-			"prAdapter == NULL return, u4LogOnOffCache=%d\n",
-				u4LogOnOffCache);
-		return;
-	}
-
-	kalMemZero(&rFwLogCmd, sizeof(rFwLogCmd));
-	rFwLogCmd.fgCmd = cmd;
-	rFwLogCmd.fgValue = value;
-	rFwLogCmd.fgEarlySet = FALSE;
-
-	rStatus = kalIoctl(prGlueInfo,
-				   connsysFwLogControl,
-				   &rFwLogCmd,
-				   sizeof(struct CMD_CONNSYS_FW_LOG),
-				   FALSE, FALSE, FALSE,
-				   &u4BufLen);
-}
-#endif
-
 #if (CFG_SUPPORT_POWER_THROTTLING == 1)
 int connsys_power_event_notification(
 		enum conn_pwr_event_type type, void *data)
@@ -5675,14 +5356,6 @@ int32_t wlanOnWhenProbeSuccess(struct GLUE_INFO *prGlueInfo,
 		update_driver_loaded_status(prGlueInfo->u4ReadyFlag);
 #endif
 	kalSetHalted(FALSE);
-
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-#if (CFG_SUPPORT_ICS == 1)
-	ics_log_event_notification((int)ICS_LOG_CMD_ON_OFF,
-		u4IcsLogOnOffCache);
-#endif
-#endif
 
 #if CFG_CHIP_RESET_HANG
 	if (fgIsResetHangState == SER_L0_HANG_RST_TRGING) {
@@ -6834,21 +6507,17 @@ static int initWlan(void)
 		kalUninitIOBuffer();
 		return ret;
 	}
+#if WLAN_INCLUDE_PROC
+	//procInitFs();
+#endif
 #if (CFG_CHIP_RESET_SUPPORT)
 	glResetInit(prGlueInfo);
 #endif
-	kalFbNotifierReg(prGlueInfo);
+	kalNotifierReg(prGlueInfo);
 	wlanRegisterNetdevNotifier();
 
 #if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
 	kalBatNotifierReg(prGlueInfo);
-#endif
-
-#ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
-	wifi_fwlog_event_func_register(consys_log_event_notification);
-#if (CFG_SUPPORT_ICS == 1)
-	wifi_ics_event_func_register(ics_log_event_notification);
-#endif /* CFG_SUPPORT_ICS */
 #endif
 
 #if CFG_MTK_MDDP_SUPPORT
@@ -6915,7 +6584,7 @@ static void exitWlan(void)
 	SalogDeInit();
 #endif /* CFG_SUPPORT_SA_LOG */
 
-	kalFbNotifierUnReg();
+	kalNotifierUnReg();
 	wlanUnregisterNetdevNotifier();
 
 	/* printk("remove %p\n", wlanRemove); */
@@ -6975,10 +6644,5 @@ EXPORT_SYMBOL(mtk_wcn_wlan_gen4_exit);
 #elif ((MTK_WCN_HIF_SDIO == 0) && (CFG_BUILT_IN_DRIVER == 1))
 
 device_initcall(initWlan);
-
-#else
-
-module_init(initWlan);
-module_exit(exitWlan);
 
 #endif

@@ -4025,7 +4025,8 @@ uint32_t wlanoidSetSer(IN struct ADAPTER *prAdapter,
 uint32_t wlanoidSerExtCmd(IN struct ADAPTER *prAdapter,
 			  uint8_t ucAction,
 			  uint8_t ucSerSet,
-			  uint8_t ucDbdcIdx);
+			  uint8_t ucDbdcIdx,
+			  u_int8_t fgIsOid);
 
 #if CFG_SUPPORT_NCHO
 #define NCHO_CMD_MAX_LENGTH	128

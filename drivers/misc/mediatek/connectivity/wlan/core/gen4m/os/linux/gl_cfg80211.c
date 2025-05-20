@@ -4906,14 +4906,8 @@ int testmode_get_ncho_roam_trigger(IN struct wiphy *wiphy,
 	}
 
 	i4Param = RCPI_TO_dBm(i4Param);		/* RCPI to DB */
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		CMD_NCHO_ROAM_TRIGGER_GET" %d", i4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(INIT, INFO, "NCHO query RoamTrigger is [%s][%s]\n",
 		cmdV1Header.buffer, pcCommand);
 
@@ -4994,14 +4988,8 @@ int testmode_get_ncho_roam_delta(IN struct wiphy *wiphy,
 		return rStatus;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		CMD_NCHO_ROAM_DELTA_GET" %d", i4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(REQ, TRACE, "NCHO query ok and ret is [%d][%s]\n",
 		i4Param, buf);
 
@@ -5090,14 +5078,8 @@ int testmode_get_ncho_roam_scn_period(IN struct wiphy *wiphy,
 		return WLAN_STATUS_NOT_INDICATING;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		CMD_NCHO_ROAM_SCAN_PERIOD_GET" %d", i4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(INIT, INFO, "NCHO query Roam Period is [%s][%s]\n",
 		cmdV1Header.buffer, buf);
 
@@ -5346,14 +5328,8 @@ int testmode_get_ncho_roam_scn_ctrl(IN struct wiphy *wiphy,
 		return rStatus;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		CMD_NCHO_ROAM_SCAN_CONTROL_GET" %u", u4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(REQ, INFO, "NCHO query ok and ret is [%u][%s]\n",
 		u4Param, buf);
 	return mtk_cfg80211_process_str_cmd_reply(wiphy,
@@ -5444,14 +5420,7 @@ int testmode_get_ncho_mode(IN struct wiphy *wiphy, IN char *pcCommand,
 		return WLAN_STATUS_INVALID_DATA;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf),
-				  CMD_NCHO_MODE_GET" %u", u4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
+	i4BytesWritten = snprintf(buf, 512, CMD_NCHO_MODE_GET" %u", u4Param);
 	DBGLOG(REQ, INFO, "NCHO query ok and ret is [%u][%s]\n",
 		u4Param, buf);
 
@@ -5643,7 +5612,7 @@ int testmode_get_cu(IN struct wiphy *wiphy,
 	struct BSS_INFO *prAisBssInfo = NULL;
 	struct AIS_FSM_INFO *prAisFsmInfo = NULL;
 	struct BSS_DESC *prBssDesc = NULL;
-	int32_t i4RetValue = -1, i4BytesWritten = -1;
+	int32_t i4RetValue = -1;
 	char buf[8] = {0};
 
 	WIPHY_PRIV(wiphy, prGlueInfo);
@@ -5655,13 +5624,7 @@ int testmode_get_cu(IN struct wiphy *wiphy,
 		prBssDesc && prBssDesc->fgExistBssLoadIE)
 		i4RetValue = prBssDesc->ucChnlUtilization;
 
-	i4BytesWritten = snprintf(buf, sizeof(buf), "%d", i4RetValue);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
+	snprintf(buf, sizeof(buf), "%d", i4RetValue);
 	DBGLOG(REQ, TRACE, "Current CU:%d\n", i4RetValue);
 
 	return mtk_cfg80211_process_str_cmd_reply(wiphy, buf, sizeof(buf));
@@ -5698,14 +5661,8 @@ int testmode_get_ncho_roam_band(IN struct wiphy *wiphy,
 		return rStatus;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		CMD_NCHO_ROAM_BAND_GET" %d", i4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(REQ, TRACE, "NCHO query ok and ret is [%d][%s]\n",
 		i4Param, buf);
 
@@ -6340,14 +6297,8 @@ int testmode_get_roam_trigger(IN struct wiphy *wiphy,
 	}
 
 	i4Param = RCPI_TO_dBm(i4Param);		/* RCPI to DB */
-	i4BytesWritten = snprintf(buf, sizeof(buf),
+	i4BytesWritten = snprintf(buf, 512,
 		"GETROAMTRIGGER_LEGACY %d", i4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
 	DBGLOG(INIT, INFO, "query RoamTrigger is [%s][%s]\n",
 		cmdV1Header.buffer, pcCommand);
 
@@ -6548,7 +6499,7 @@ priv_driver_set_indoor_ch(IN struct wiphy *wiphy,
 	struct ADAPTER *prAdapter;
 	struct REG_INFO *prRegInfo;
 	uint32_t u4BufLen;
-	int i, count;
+	int i, j;
 	uint32_t rStatus = WLAN_STATUS_FAILURE;
 
 	DBGLOG(INIT, TRACE, "command is %s\n", pcCommand);
@@ -6594,33 +6545,24 @@ priv_driver_set_indoor_ch(IN struct wiphy *wiphy,
 
 	blockedChs = kalMemAlloc(sizeof(int8_t) * numBlockedChs,
 				 VIR_MEM_TYPE);
-	if (!blockedChs) {
-		DBGLOG(REQ, ERROR, "alloc blockedChs fail!\n");
-		return WLAN_STATUS_FAILURE;
-	}
-
 	prRegInfo->eRegChannelListMap = REG_CH_MAP_BLOCK_INDOOR;
-	for (i = 2, count = 0; i < i4Argc; i++) {
-		if (kalkStrtou8(apcArgv[i], 0, &(blockedChs[count])))
+	for (i = 2, j = 0; i < i4Argc; i++) {
+		if (kalkStrtou8(apcArgv[i], 0, &(blockedChs[j])))
 			DBGLOG(REQ, LOUD, "err parse ch %s\n", apcArgv[1]);
 
-		if (!rlmIsValidChnl(prAdapter, blockedChs[count], BAND_5G)) {
+		if (!rlmIsValidChnl(prAdapter, blockedChs[j], BAND_5G)) {
 			DBGLOG(INIT, INFO, "Skip blocked CH: %d\n",
-				blockedChs[count]);
+				blockedChs[j]);
 			continue;
 		}
 
-		count++;
+		j++;
 	}
+	numBlockedChs = j;
 
-	rStatus = kalIoctl(prGlueInfo, wlanoidSetBlockIndoorChs,
-			blockedChs, count, FALSE,
+	return kalIoctl(prGlueInfo, wlanoidSetBlockIndoorChs,
+			blockedChs, numBlockedChs, FALSE,
 			FALSE, TRUE, &u4BufLen);
-
-	kalMemFree(blockedChs, VIR_MEM_TYPE,
-		   sizeof(int8_t) * numBlockedChs);
-
-	return rStatus;
 }
 
 int
@@ -6739,13 +6681,7 @@ int testmode_get_roaming_reason_enabled(IN struct wiphy *wiphy,
 		return rStatus;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf), "%u", u4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
+	i4BytesWritten = snprintf(buf, 512, "%u", u4Param);
 	DBGLOG(REQ, INFO, "ret is %d\n", u4Param);
 
 	return mtk_cfg80211_process_str_cmd_reply(wiphy,
@@ -6820,13 +6756,7 @@ int testmode_get_br_err_reason_enabled(IN struct wiphy *wiphy,
 		return rStatus;
 	}
 
-	i4BytesWritten = snprintf(buf, sizeof(buf), "%u", u4Param);
-	if (i4BytesWritten < 0 || (uint32_t) i4BytesWritten >= sizeof(buf)) {
-		DBGLOG(REQ, ERROR, "snprintf return value error %d!\n",
-		       i4BytesWritten);
-		return WLAN_STATUS_FAILURE;
-	}
-
+	i4BytesWritten = snprintf(buf, 512, "%u", u4Param);
 	DBGLOG(REQ, INFO, "ret is %d\n", u4Param);
 
 	return mtk_cfg80211_process_str_cmd_reply(wiphy,
@@ -7236,50 +7166,6 @@ int32_t mtk_cfg80211_process_str_cmd(IN struct wiphy *wiphy,
 		return testmode_set_scan_param(wiphy, cmd, len);
 	} else if (strnicmp(cmd, "GET_CU", 6) == 0) {
 		return testmode_get_cu(wiphy, cmd, len, ucBssIndex);
-	} else if (strnicmp(cmd, "SET_DEBUG_LEVEL ", 16) == 0) {
-		struct CMD_CONNSYS_FW_LOG rFwLogCmd;
-		uint32_t u4BufLen;
-
-		kalMemZero(&rFwLogCmd, sizeof(rFwLogCmd));
-		rFwLogCmd.fgCmd = FW_LOG_CMD_ON_OFF;
-		rFwLogCmd.fgEarlySet = FALSE;
-
-		if (strnicmp(cmd+16, "1", 1) == 0) {
-			DBGLOG(REQ, INFO,
-				"Set log level to DEFAULT\n");
-
-			rFwLogCmd.fgValue = 0;
-			kalIoctl(prGlueInfo,
-				connsysFwLogControl,
-				&rFwLogCmd,
-				sizeof(struct CMD_CONNSYS_FW_LOG),
-				FALSE, FALSE, FALSE,
-				&u4BufLen);
-		} else if (strnicmp(cmd+16, "2", 1) == 0) {
-			DBGLOG(REQ, INFO,
-				"Set log level to MORE\n");
-
-			rFwLogCmd.fgValue = 1;
-			kalIoctl(prGlueInfo,
-				connsysFwLogControl,
-				&rFwLogCmd,
-				sizeof(struct CMD_CONNSYS_FW_LOG),
-				FALSE, FALSE, FALSE,
-				&u4BufLen);
-		} else if (strnicmp(cmd+16, "3", 1) == 0) {
-			DBGLOG(REQ, INFO,
-				"Set log level to EXTREME\n");
-
-			rFwLogCmd.fgValue = 2;
-			kalIoctl(prGlueInfo,
-				connsysFwLogControl,
-				&rFwLogCmd,
-				sizeof(struct CMD_CONNSYS_FW_LOG),
-				FALSE, FALSE, FALSE,
-				&u4BufLen);
-		} else {
-			DBGLOG(REQ, WARN, "Invalid log level.\n");
-		}
 #endif
 	} else
 		return -EOPNOTSUPP;
@@ -7290,18 +7176,6 @@ int32_t mtk_cfg80211_process_str_cmd(IN struct wiphy *wiphy,
 #endif /* CONFIG_NL80211_TESTMODE */
 
 #if (CFG_SUPPORT_SINGLE_SKU == 1)
-
-#if (CFG_BUILT_IN_DRIVER == 1)
-/* in kernel-x.x/net/wireless/reg.c */
-#else
-bool is_world_regdom(const char *alpha2)
-{
-	if (!alpha2)
-		return false;
-
-	return (alpha2[0] == '0') && (alpha2[1] == '0');
-}
-#endif
 
 enum regd_state regd_state_machine(IN struct regulatory_request *pRequest)
 {

@@ -110,7 +110,6 @@ static uint8_t apucRoamingReasonToLog[ROAMING_REASON_NUM] = {
 	4, /* Unspecific   - map to ROAMING_REASON_SAA_FAIL(8) */
 	0, /* Unspecific   - map to ROAMING_REASON_UPPER_LAYER_TRIGGER(9) */
 	5, /* Unspecific   - map to ROAMING_REASON_BTM(10) */
-	0, /* Unspecific   - map to ROAMING_REASON_REASSOC(11) */
 };
 
 /*******************************************************************************
@@ -972,9 +971,6 @@ void roamingFsmLogScanStart(IN struct ADAPTER *prAdapter,
 	ucIsValidCu = (prBssDesc && prBssDesc->fgExistBssLoadIE);
 	if (ucIsValidCu)
 		u4CannelUtilization = prBssDesc->ucChnlUtilization * 100 / 255;
-
-	if (prRoamInfo->eReason >= ROAMING_REASON_NUM)
-		return;
 
 	kalSprintf(aucLog,
 		"[ROAM] SCAN_START reason=%d rssi=%d cu=%d full_scan=%d rssi_thres=%d",

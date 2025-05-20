@@ -48,7 +48,6 @@ void gps_dl_reserved_mem_init(void)
 
 	/* Set EMI MPU permission */
 #if (GPS_DL_SET_EMI_MPU_CFG)
-	memset(&region, 0, sizeof(region));
 	if (gps_not_allocate_emi_from_lk2 == 1) {
 		GDL_LOGI_INI("emi mpu cfg: region = %d, no protection domain = %d, %d",
 			GPS_DL_EMI_MPU_REGION_NUM, GPS_DL_EMI_MPU_DOMAIN_AP, GPS_DL_EMI_MPU_DOMAIN_CONN);

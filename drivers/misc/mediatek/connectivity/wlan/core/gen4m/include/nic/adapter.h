@@ -1114,7 +1114,6 @@ struct WIFI_VAR {
 	uint32_t u4MtkOuiCap;
 	uint8_t aucMtkFeature[4];
 	u_int8_t ucGbandProbe256QAM;
-	uint8_t ucCustomerOui;
 #endif
 #if CFG_SUPPORT_VHT_IE_IN_2G
 	uint8_t ucVhtIeIn2g;

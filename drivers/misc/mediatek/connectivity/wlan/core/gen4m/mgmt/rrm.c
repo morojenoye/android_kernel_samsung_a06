@@ -1462,7 +1462,7 @@ static void rrmHandleBeaconReqSubelem(
 		}
 		case BEACON_REQUEST_SUBELEM_AP_CHANNEL:
 		{
-			uint8_t buf[256], i, len, bytelen = 0, byte;
+			uint8_t buf[64], i, len;
 			uint8_t *pos = &buf[0];
 			uint8_t *end = pos + sizeof(buf);
 
@@ -1476,33 +1476,23 @@ static void rrmHandleBeaconReqSubelem(
 			 * EleID 1, Length 1, Op class 1, channel List N
 			 */
 			len = slen - 1;
-			for (i = 0; i < len; i++) {
-				if (i + data->apChannelsLen <
-					sizeof(data->apChannels)) {
-					data->apChannels[i +
-						data->apChannelsLen] =
-						subelems[3 + i];
-				} else {
-					DBGLOG(RRM, WARN,
-						"apChannelsLen out of range %u",
-						i + data->apChannelsLen);
-					break;
-				}
-			}
-			data->apChannelsLen += i;
+			for (i = 0; i < len; i++)
+				data->apChannels[i + data->apChannelsLen] =
+					subelems[3 + i];
+			data->apChannelsLen += len;
 
+			// patch work only for MTK patch #96620
+			// 1. return to revision #5 
+			// 2. revert (restore to revision #6)
+			// 3. integration to REL
 			if (data->apChannelsLen) {
 				for (i = 0 ; (end - pos > 3) &&
 					i < data->apChannelsLen; i++) {
-					byte = kalSnprintf(pos, end - pos,
+					pos += kalSnprintf(pos, end - pos,
 						" %d", data->apChannels[i]);
-					bytelen += byte;
-					if (bytelen >= sizeof(buf))
-						break;
-					pos += byte;
 				}
 				*pos = '\0';
-				DBGLOG(RRM, INFO, "AP chnls  %s", buf);
+				DBGLOG(RRM, INFO, "AP chnls %s", buf);
 			}
 			break;
 		}
@@ -1781,7 +1771,6 @@ void rrmCollectBeaconReport(IN struct ADAPTER *prAdapter,
 	} else if (bcnReq->ucChannel == 0) {
 		struct RF_CHANNEL_INFO aucChannelList[MAX_PER_BAND_CHN_NUM];
 		u_int8_t ucChannelListNum = 0;
-		kalMemZero(aucChannelList, sizeof(aucChannelList));
 
 		rlmDomainGetChnlListFromOpClass(prAdapter,
 			bcnReq->ucRegulatoryClass,

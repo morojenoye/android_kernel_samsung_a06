@@ -724,12 +724,6 @@ void cnmChMngrRequestPrivilege(struct ADAPTER
 
 	/* Activate network if it's not activated yet */
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, prMsgChReq->ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(CNM, ERROR,
-			"Invalid bss idx: %d\n",
-			prMsgChReq->ucBssIndex);
-		return;
-	}
 
 	if (!prBssInfo) {
 		log_dbg(CNM, ERROR,
@@ -1848,12 +1842,7 @@ static uint8_t cnmGetAPBwPermitted(struct ADAPTER
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 					  ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(INIT, ERROR,
-			"Invalid bss idx: %d\n",
-			ucBssIndex);
-		return MAX_BW_20MHZ;
-	}
+
 
 	if (IS_BSS_AIS(prBssInfo)) {
 		/*AIS station mode*/
@@ -2015,12 +2004,6 @@ uint8_t cnmGetBssMaxBw(struct ADAPTER *prAdapter,
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 					  ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(CNM, ERROR,
-			"Invalid bss idx: %d\n",
-			ucBssIndex);
-		return MAX_BW_20MHZ;
-	}
 
 	if (IS_BSS_AIS(prBssInfo)) {
 		/* STA mode */

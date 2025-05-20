@@ -883,9 +883,6 @@ u_int8_t rsnPerformPolicySelection(
 	eEncStatus =
 	    aisGetEncStatus(prAdapter, ucBssIndex);
 
-	DBGLOG(RSN, INFO, "BSS["MACSTR"] AuthMode [%d], EncStatus [%d]",
-		MAC2STR(prBss->aucBSSID), eAuthMode, eEncStatus);
-
 #if (CFG_SUPPORT_WIFI_6G == 1)
 	if (prBss->eBand == BAND_6G) {
 		if (!rsnKeyMgmtWpa3for6g(
@@ -1868,8 +1865,6 @@ void rsnGenerateRSNIE(IN struct ADAPTER *prAdapter,
 
 			if (!prStaRec) {
 				DBGLOG(RSN, ERROR, "prStaRec is NULL!");
-			} else if (prStaRec->ucAuthAlgNum == AUTH_ALGORITHM_NUM_SAE) {
-				DBGLOG(RSN, ERROR, "auth SAE, no pmk ID!");
 			}
 
 			prBssDesc = scanSearchBssDescByBssid(prAdapter,
@@ -2080,13 +2075,7 @@ void rsnParserCheckForRSNCCMPPSK(struct ADAPTER *prAdapter,
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 					  prStaRec->ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(RSN, ERROR, "prBssInfo is null\n");
-		return;
-	}
-
 	*pu2StatusCode = STATUS_CODE_INVALID_INFO_ELEMENT;
-	kalMemZero(&rRsnIe, sizeof(struct RSN_INFO));
 
 	if (rsnParseRsnIE(prAdapter, prIe, &rRsnIe)) {
 		if ((rRsnIe.u4PairwiseKeyCipherSuiteCount != 1)
@@ -2123,7 +2112,8 @@ void rsnParserCheckForRSNCCMPPSK(struct ADAPTER *prAdapter,
 		if (prAdapter->rWifiVar.fgSapCheckPmkidInDriver
 			&& prBssInfo->u4RsnSelectedAKMSuite
 				== RSN_AKM_SUITE_SAE
-			&& rRsnIe.u2PmkidCount > 0) {
+			&& rRsnIe.u2PmkidCount > 0
+			&& prStaRec->ucAuthAlgNum != AUTH_ALGORITHM_NUM_SAE) {
 			struct PMKID_ENTRY *entry =
 				rsnSearchPmkidEntry(prAdapter,
 				prStaRec->aucMacAddr,
@@ -2355,11 +2345,6 @@ struct PMKID_ENTRY *rsnSearchPmkidEntry(IN struct ADAPTER *prAdapter,
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 		ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(RSN, ERROR, "prBssInfo is null\n");
-		return NULL;
-	}
-
 	cache = &prBssInfo->rPmkidCache;
 
 	LINK_FOR_EACH_ENTRY(entry, cache, rLinkEntry, struct PMKID_ENTRY) {
@@ -2379,11 +2364,6 @@ struct PMKID_ENTRY *rsnSearchPmkidEntryBySsid(IN struct ADAPTER *prAdapter,
 	struct LINK *cache;
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(RSN, ERROR, "prBssInfo is null\n");
-		return NULL;
-	}
-
 	cache = &prBssInfo->rPmkidCache;
 
 	LINK_FOR_EACH_ENTRY(entry, cache, rLinkEntry, struct PMKID_ENTRY) {
@@ -2636,11 +2616,6 @@ uint32_t rsnFlushPmkid(IN struct ADAPTER *prAdapter, IN uint8_t ucBssIndex)
 
 	prBssInfo =
 		GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
-	if (!prBssInfo) {
-		DBGLOG(RSN, ERROR, "prBssInfo is null\n");
-		return WLAN_STATUS_INVALID_DATA;
-	}
-
 	cache = &prBssInfo->rPmkidCache;
 
 	DBGLOG(RSN, TRACE, "[%d] Flush Pmkid total:%d\n",
@@ -2763,20 +2738,37 @@ uint8_t rsnCheckSaQueryTimeout(
 		prBssSpecInfo->pucSaQueryTransId = NULL;
 		prBssSpecInfo->u4SaQueryCount = 0;
 		cnmTimerStopTimer(prAdapter, &prBssSpecInfo->rSaQueryTimer);
-
-		if (prAisBssInfo == NULL)
+#if 1
+		if (prAisBssInfo == NULL) {
 			DBGLOG(RSN, ERROR, "prAisBssInfo is NULL");
-		else if (prAisBssInfo->eConnectionState ==
-					MEDIA_STATE_CONNECTED)
-			saaSendDisconnectMsgHandler(prAdapter,
-					prAisBssInfo->prStaRecOfAP,
-					prAisBssInfo,
-					FRM_DEAUTH);
+		} else if (prAisBssInfo->eConnectionState ==
+		    MEDIA_STATE_CONNECTED) {
+			struct MSG_AIS_ABORT *prAisAbortMsg;
 
-		return TRUE;
+			prAisAbortMsg =
+				(struct MSG_AIS_ABORT *) cnmMemAlloc(prAdapter,
+						RAM_TYPE_MSG,
+						sizeof(struct MSG_AIS_ABORT));
+			if (!prAisAbortMsg)
+				return 0;
+			prAisAbortMsg->rMsgHdr.eMsgId = MID_SAA_AIS_FSM_ABORT;
+			prAisAbortMsg->ucReasonOfDisconnect =
+			    DISCONNECT_REASON_CODE_DISASSOCIATED;
+			prAisAbortMsg->fgDelayIndication = FALSE;
+			prAisAbortMsg->ucBssIndex = ucBssIdx;
+			mboxSendMsg(prAdapter, MBOX_ID_0,
+				    (struct MSG_HDR *) prAisAbortMsg,
+				    MSG_SEND_METHOD_BUF);
+		}
+#else
+		/* Re-connect */
+		kalIndicateStatusAndComplete(prAdapter->prGlueInfo,
+					WLAN_STATUS_MEDIA_DISCONNECT, NULL, 0);
+#endif
+		return 1;
 	}
 
-	return FALSE;
+	return 0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -3308,11 +3300,6 @@ void rsnGenerateWSCIEForAssocRsp(struct ADAPTER *prAdapter,
 	DBGLOG(RSN, TRACE, "WPS: Building WPS IE for (Re)Association Response");
 	prP2pBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, prMsduInfo->ucBssIndex);
 
-	if (!prP2pBssInfo) {
-		DBGLOG(RSN, ERROR, "prP2pBssInfo is null\n");
-		return;
-	}
-
 	if (prP2pBssInfo->eNetworkType != NETWORK_TYPE_P2P)
 		return;
 
@@ -3465,11 +3452,6 @@ uint8_t rsnApCheckSaQueryTimeout(IN struct ADAPTER
 
 		prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 						  prStaRec->ucBssIndex);
-
-		if (!prBssInfo) {
-			DBGLOG(RSN, ERROR, "prBssInfo is null\n");
-			return 1;
-		}
 
 		/* refer to p2pRoleFsmRunEventRxDeauthentication */
 		if (prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT) {

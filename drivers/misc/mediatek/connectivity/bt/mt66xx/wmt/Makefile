@@ -4,10 +4,6 @@
 ###############################################################################
 # Necessary Check
 
-ifneq ($(KERNEL_OUT),)
-    ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
-endif
-
 ifndef TOP
     TOP := $(srctree)/..
 endif
@@ -50,23 +46,21 @@ endif
 ###############################################################################
 # To include BT driver dependent header file
 
-WMT_SRC_FOLDER := $(TOP)/vendor/mediatek/kernel_modules/connectivity/common
 ccflags-y += -I$(WMT_SRC_FOLDER)/common_main/include
 ccflags-y += -I$(WMT_SRC_FOLDER)/common_main/linux/include
-ifneq ($(CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH),)
-ccflags-y += -I$(WMT_SRC_FOLDER)/debug_utility
-endif
 ccflags-y += -I$(src)/../include/btif
 
 ###############################################################################
 
+ifneq ($(BT_PLATFORM),)
 MODULE_NAME := bt_drv_$(BT_PLATFORM)
-obj-m += $(MODULE_NAME).o
+else
+MODULE_NAME := bt_drv
+endif
+
+obj-y += $(MODULE_NAME).o
 
 ccflags-y += -D CREATE_NODE_DYNAMIC=1
 
 $(MODULE_NAME)-objs += stp_chrdev_bt.o
-$(MODULE_NAME)-objs += btmtk_dbg.o btmtk_dbg_tp_evt_if.o
-ifneq ($(CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH),)
-$(MODULE_NAME)-objs += fw_log_bt.o
-endif
+$(MODULE_NAME)-objs += btmtk_dbg.o

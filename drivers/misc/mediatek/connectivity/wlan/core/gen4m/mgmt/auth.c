@@ -722,14 +722,12 @@ authCheckRxAuthFrameStatus(IN struct ADAPTER *prAdapter,
 	u2RxTransactionSeqNum = prAuthFrame->u2AuthTransSeqNo;
 	/* NOTE(Kevin): Optimized for ARM */
 	if (u2RxTransactionSeqNum != u2TransactionSeqNum) {
-	        DBGLOG(SAA, WARN, "missmatch u2TransactionSeqNum %d %d\n", u2RxTransactionSeqNum,u2TransactionSeqNum);
 		if (prStaRec->eAuthAssocState != SAA_STATE_EXTERNAL_AUTH) {
 			DBGLOG(SAA, WARN,
 		       "Discard Auth frame with Transaction Seq No = %d\n",
 		       u2RxTransactionSeqNum);
 			*pu2StatusCode = STATUS_CODE_AUTH_OUT_OF_SEQ;
 		}
-		DBGLOG(SAA, INFO,"dbg_Auth frame with Transaction Seq No = %d\n",u2RxTransactionSeqNum);
 		return WLAN_STATUS_FAILURE;
 	}
 	/* 4 <3> Get the Status code */
@@ -745,7 +743,6 @@ authCheckRxAuthFrameStatus(IN struct ADAPTER *prAdapter,
 		|| prStaRec->eAuthAssocState == SAA_STATE_SEND_AUTH1
 		|| prStaRec->eAuthAssocState == SAA_STATE_SEND_AUTH3) {
 
-            DBGLOG(SAA, INFO,"dbg_AutheAuthAssocState = %d\n",prStaRec->eAuthAssocState);
 			kalSprintf(log,
 				"[CONN] AUTH RESP bssid=" RPTMACSTR
 				" auth_algo=%d sn=%d status=%d",
@@ -756,7 +753,6 @@ authCheckRxAuthFrameStatus(IN struct ADAPTER *prAdapter,
 			kalReportWifiLog(prAdapter, prStaRec->ucBssIndex, log);
 		} else if (prStaRec->eAuthAssocState ==
 			SAA_STATE_EXTERNAL_AUTH) {
-			DBGLOG(SAA, INFO,"dbg_AutheAuthAssocState = %d\n",prStaRec->eAuthAssocState);
 			kalSprintf(log,
 				"[CONN] AUTH RESP bssid=" RPTMACSTR
 				" auth_algo=%d type=%d sn=%d status=%d",

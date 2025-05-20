@@ -5342,7 +5342,7 @@ void nicSerInit(IN struct ADAPTER *prAdapter)
 #endif
 	) {
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET,
-				SER_SET_DISABLE, 0);
+				SER_SET_DISABLE, 0, FALSE);
 	}
 
 }

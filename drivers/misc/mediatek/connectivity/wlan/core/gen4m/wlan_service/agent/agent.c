@@ -979,7 +979,7 @@ static s_int32 hqa_mac_bbp_reg_write(
 	s_int32 ret = SERV_STATUS_SUCCESS;
 	struct test_register *test_regs = &serv_test->test_reg;
 	u_char *data = hqa_frame->data;
-	u_int32 cr_val = 0;
+	u_int32 cr_val;
 
 	SERV_LOG(SERV_DBG_CAT_TEST, SERV_DBG_LVL_TRACE, ("%s\n", __func__));
 
@@ -1032,9 +1032,6 @@ static s_int32 hqa_mac_bbp_reg_bulk_read(
 				&data, (u_char *)&test_regs->cr_addr);
 	get_param_and_shift_buf(TRUE, sizeof(test_regs->cr_num),
 				&data, (u_char *)&test_regs->cr_num);
-
-	if (test_regs->cr_num >= CR_NUM_MAX)
-		test_regs->cr_num = CR_NUM_MAX;
 
 	/* Allocate cr_val memory */
 	cr_total_len = test_regs->cr_num << 2;
@@ -1156,9 +1153,6 @@ static s_int32 hqa_rf_reg_bulk_write(
 				&data, (u_char *)&test_regs->cr_addr);
 	get_param_and_shift_buf(TRUE, sizeof(u_int32),
 				&data, (u_char *)&test_regs->cr_num);
-
-	if (test_regs->cr_num >= CR_NUM_MAX)
-		test_regs->cr_num = CR_NUM_MAX;
 
 	if (test_regs->cr_num == 0) {
 		SERV_LOG(SERV_DBG_CAT_TEST, SERV_DBG_LVL_ERROR,
@@ -1898,7 +1892,7 @@ static s_int32 hqa_ca53_reg_write(
 	s_int32 ret = SERV_STATUS_SUCCESS;
 	struct test_register *test_regs = &serv_test->test_reg;
 	u_char *data = hqa_frame->data;
-	u_int32 cr_val = 0;
+	u_int32 cr_val;
 
 	SERV_LOG(SERV_DBG_CAT_TEST, SERV_DBG_LVL_TRACE, ("%s\n", __func__));
 
@@ -4610,9 +4604,6 @@ static s_int32 hqa_listmode_tx_seg(
 		get_param_and_shift_buf(TRUE, sizeof(u_int32), &data,
 			(u_char *)&ParserSegHeader.u4SegParaNum);
 
-		if (ParserSegHeader.u4SegParaNum >= SEGPARANUM_MAX)
-			ParserSegHeader.u4SegParaNum = SEGPARANUM_MAX;
-
 		SERV_LOG(SERV_DBG_CAT_TEST, SERV_DBG_LVL_TRACE,
 			("%s ExtId(%d) FC(%d) Dur(%d) Dur(%d) TxLen(%d)\n",
 			__func__, ParserSegHeader.u4ExtId,
@@ -4878,9 +4869,6 @@ static s_int32 hqa_listmode_rx_seg(
 		get_param_and_shift_buf(TRUE, sizeof(u_int32),
 				&data,
 				(u_char *)&ParserSegHeader.u4SegParaNum);
-
-		if (ParserSegHeader.u4SegParaNum >= SEGPARANUM_MAX)
-			ParserSegHeader.u4SegParaNum = SEGPARANUM_MAX;
 
 		SERV_LOG(SERV_DBG_CAT_TEST, SERV_DBG_LVL_TRACE,
 			("%s OwnMac[%x][%x][%x][%x][%x][%x]\n",

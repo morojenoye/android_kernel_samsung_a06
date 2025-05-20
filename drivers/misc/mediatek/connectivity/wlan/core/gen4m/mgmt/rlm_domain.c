@@ -69,23 +69,37 @@
  *******************************************************************************
  */
 #include "precomp.h"
-#if defined(CONFIG_MTK_N18_DOMAIN_CH)
-#include "rlm_channel_n18.h"
-#elif defined(CONFIG_MTK_N27_DOMAIN_CH)
+#if defined(CONFIG_MTK_S96901AA1_DOMAIN_PWR)
 #include "rlm_channel_latest_n27.h"
 #elif defined(CONFIG_MTK_LATEST_DOMAIN_CH)
 #include "rlm_channel_latest.h"
 #elif defined(CONFIG_MTK_NEW_DOMAIN_CH)
 #include "rlm_channel.h"
-#else
+#elif defined CONFIG_MTK_S96516SA1_DOMAIN_CH
 #include "rlm_channel_legacy.h"
+#elif defined CONFIG_BOARD_HAS_W1_OPTION_H
+#include "rlm_channel_legacy.h"
+#else
+#include "rlm_channel.h"
 #endif
+
 #if defined(CFG_RLM_TXPWR_INIT_FILE_HEADER)
 #include CFG_RLM_TXPWR_INIT_FILE_HEADER
+#elif defined CONFIG_BOARD_HAS_W1_OPTION_H
+#include "rlm_txpwr_init_w1.h"
+#elif defined CONFIG_MTK_S96516SA1_DOMAIN_CH
+#include "rlm_txpwr_init_n23.h"
+#elif defined CONFIG_MTK_S96616AA1_DOMAIN_PWR
+#include "rlm_txpwr_init_n26.h"
+#elif defined CONFIG_MTK_S96902AA1_DOMAIN_PWR
+#include "rlm_txpwr_init_w2na.h"
+#elif defined CONFIG_MTK_S96901AA1_DOMAIN_PWR
+#include "rlm_txpwr_init_w2gl.h"
+#elif defined CONFIG_MTK_S96818AA1_DOMAIN_PWR
+#include "rlm_txpwr_init_n28.h"
 #else
 #include "rlm_txpwr_init.h"
 #endif
-
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -4475,7 +4489,7 @@ struct TX_PWR_CTRL_ELEMENT *txPwrCtrlStringToStruct(char *pcContent,
 		       pcContOld);
 		return NULL;
 	}
-	if (op != 1) {
+	if ((op != 1) || (value < 0)) {
 		DBGLOG(RLM, ERROR,
 		       "parse scenario sub index error: op=%u, val=%d\n",
 		       op, value);
@@ -5187,10 +5201,19 @@ void txPwrCtrlCfgFileToList(struct ADAPTER *prAdapter)
 					      VIR_MEM_TYPE);
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
 	if (pucConfigBuf) {
-		if (kalRequestFirmware("txpowerctrl.cfg", pucConfigBuf,
-		    WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
-		    prAdapter->prGlueInfo->prDev) == 0) {
-			/* ToDo:: Nothing */
+		if( strstr(saved_command_line,"androidboot.board_id=S96801BA1") ||
+			strstr(saved_command_line,"androidboot.board_id=S96801TA1") ){
+			if (kalRequestFirmware("grippower_la.info", pucConfigBuf,
+				WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
+				prAdapter->prGlueInfo->prDev) == 0) {
+				/* ToDo:: Nothing */
+			}
+		} else {
+			if (kalRequestFirmware("grippower.info", pucConfigBuf,
+				WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
+				prAdapter->prGlueInfo->prDev) == 0) {
+				/* ToDo:: Nothing */
+			} 
 		}
 
 		if (pucConfigBuf[0] != '\0' && u4ConfigReadLen > 0
@@ -5199,7 +5222,7 @@ void txPwrCtrlCfgFileToList(struct ADAPTER *prAdapter)
 			txPwrCtrlFileBufToList(prAdapter, pucConfigBuf);
 		} else
 			DBGLOG(RLM, INFO,
-			       "no txpowerctrl.cfg or file is empty\n");
+			       "no grippower.info or file is empty\n");
 
 		kalMemFree(pucConfigBuf, VIR_MEM_TYPE, WLAN_CFG_FILE_BUF_SIZE);
 	}
@@ -5210,7 +5233,7 @@ void txPwrCtrlLoadConfig(struct ADAPTER *prAdapter)
 	/* 1. add records from global tx power ctrl setting into cfg list */
 	txPwrCtrlGlobalVariableToList(prAdapter);
 
-	/* 2. update cfg list by txpowerctrl.cfg */
+	/* 2. update cfg list by grippower.info */
 	txPwrCtrlCfgFileToList(prAdapter);
 
 #if CFG_SUPPORT_PWR_LIMIT_COUNTRY

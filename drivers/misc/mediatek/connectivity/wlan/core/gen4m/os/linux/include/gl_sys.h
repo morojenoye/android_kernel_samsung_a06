@@ -29,7 +29,7 @@
  *                              C O N S T A N T S
  *******************************************************************************
  */
-#define FS_VERSION						5
+#define FS_VERSION						4
 #define FS_VERSION_SIZE					2
 
 #define FS_SOLUTION_PROVIDER_SIZE		3
@@ -208,8 +208,6 @@
  * B4~B7 : Number of max NAN NDP
  */
 #define FS_SW_P2P_TDLS_MAX_NUM			4
-#define FS_SW_P2P_NAN_MAX_NDP			2
-#define FS_SW_P2P_NAN_MAX_OFFSET		4
 
 /* 3rd byte */
 #define FS_SW_P2P_STA_P2P				BIT(0)
@@ -229,10 +227,6 @@
 #define FS_SW_P2P_STA_SAP_NAN_TDLS		BIT(4)
 #define FS_SW_P2P_STA_P2P_P2P_TDLS		BIT(5)
 #define FS_SW_P2P_STA_P2P_NAN_TDLS		BIT(6)
-
-/* 6th byte */
-#define FS_SW_P2P_NAN_REL_VER			3
-#define FS_SW_P2P_NAN_REL_OFFSET		3
 
 /* 14 BIG DATA */
 #define FS_SW_BIGD_ID					14

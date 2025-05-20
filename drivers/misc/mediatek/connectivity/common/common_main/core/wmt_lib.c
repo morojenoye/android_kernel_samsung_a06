@@ -2066,14 +2066,8 @@ INT32 wmt_lib_try_pwr_off(VOID)
 	pSignal = &pOp->signal;
 	pSignal->timeoutValue = MAX_FUNC_OFF_TIME;
 	pOp->op.opId = WMT_OPID_TRY_PWR_OFF;
-	if (DISABLE_PSM_MONITOR()) {
-		WMT_ERR_FUNC("wake up failed\n");
-		wmt_lib_put_op_to_free_queue(pOp);
-		return -2;
-	}
 
 	bRet = wmt_lib_put_act_op(pOp);
-	ENABLE_PSM_MONITOR();
 	if (bRet == MTK_WCN_BOOL_FALSE) {
 		WMT_WARN_FUNC("WMT_OPID_TRY_PWR_OFF fail(%d)\n", bRet);
 		return -2;

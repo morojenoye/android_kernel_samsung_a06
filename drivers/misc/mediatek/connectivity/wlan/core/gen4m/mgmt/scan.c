@@ -1528,18 +1528,18 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 {
 	uint8_t *pucProfileIE, i = 0, j = 0, ucNewLink = FALSE;
 	uint8_t ucShortSsidOffset, ucBssParamOffset, ucTbttInfoType;
-	uint8_t ucBssidNum = 0, ucCurrentLength = 0, ucShortSsidNum = 0;
+	uint8_t ucBssidNum = 0,ucShortSsidNum = 0;
 	uint8_t ucRnrChNum, ucHasBssid = FALSE, ucScanEnable = TRUE;
 	uint8_t aucNullAddr[] = NULL_MAC_ADDR;
-	uint16_t u2TbttInfoCount, u2TbttInfoLength;
+	uint16_t u2TbttInfoCount, u2TbttInfoLength, u2CurrentLength = 0;
 	struct NEIGHBOR_AP_INFO *prNeighborAPInfo = NULL;
 	struct NEIGHBOR_AP_INFO_FIELD *prNeighborAPInfoField;
 	struct PARAM_SCAN_REQUEST_ADV *prScanRequest;
 	struct IE_SHORT_SSID_LIST *prIeShortSsidList;
 	struct BSS_DESC *prBssDescTemp = NULL;
 
-	while (ucCurrentLength < IE_LEN(pucIE)) {
-		pucProfileIE = &IE_ID_EXT(pucIE) + ucCurrentLength;
+	while (u2CurrentLength < IE_LEN(pucIE)) {
+		pucProfileIE = &IE_ID_EXT(pucIE) + u2CurrentLength;
 		prNeighborAPInfoField =
 			(struct NEIGHBOR_AP_INFO_FIELD *)pucProfileIE;
 
@@ -1554,16 +1554,16 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		u2TbttInfoLength = (prNeighborAPInfoField->u2TbttInfoHdr &
 						TBTT_INFO_HDR_LENGTH)
 						>> TBTT_INFO_HDR_LENGTH_OFFSET;
-		ucTbttInfoType = (prNeighborAPInfoField->u2TbttInfoHdr &
-						TBTT_INFO_HDR_FIELD_TYPE);
+                ucTbttInfoType = (prNeighborAPInfoField->u2TbttInfoHdr &
+                                                TBTT_INFO_HDR_FIELD_TYPE);
 
-		/* Check Tbtt Info type is valid or not*/
-		if (ucTbttInfoType != 0) {
-			DBGLOG(SCN, ERROR, "Invalid TBTT info type=%d,["MACSTR"]\n",
-				ucTbttInfoType,
-				MAC2STR(prBssDesc->aucBSSID));
-			return;
-		}
+                /* Check Tbtt Info type is valid or not*/
+                if (ucTbttInfoType != 0) {
+                        DBGLOG(SCN, ERROR, "Invalid TBTT info type = %d\n",
+                                ucTbttInfoType);
+                        return;
+                }
+				
 		/* Check Tbtt Info length is valid or not*/
 		if (!scanValidRnrTbttInfo(u2TbttInfoLength)) {
 			DBGLOG(SCN, ERROR, "Invalid TBTT info length=%d,["MACSTR"]\n",
@@ -1578,18 +1578,18 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 			DBGLOG(SCN, INFO,
 				"RNR op class(%d) is not 6G,Len=(%d,%d),TbttInfo(%d,%d)\n",
 				prNeighborAPInfoField->ucOpClass,
-				IE_LEN(pucIE), ucCurrentLength,
+				IE_LEN(pucIE), u2CurrentLength,
 				u2TbttInfoCount, u2TbttInfoLength);
 
 			/* Calculate next NeighborAPInfo's index if exists */
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 		} else {
 			/* RNR bring 6G channel, but chip not support 6G */
 			/* Calculate next NeighborAPInfo's index if exists */
 #if !(CFG_SUPPORT_WIFI_6G)
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 #endif
@@ -1669,7 +1669,7 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 			if (LINK_IS_EMPTY(&prAdapter->rNeighborAPInfoList))
 				cnmMemFree(prAdapter, prNeighborAPInfo);
 			/* Calculate next NeighborAPInfo's index if exists */
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 		}
@@ -1796,7 +1796,7 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 						ucBssidNum);
 		}
 		/* Calculate next NeighborAPInfo's index if exists */
-		ucCurrentLength += 4 + (u2TbttInfoCount * u2TbttInfoLength);
+		u2CurrentLength += 4 + (u2TbttInfoCount * u2TbttInfoLength);
 
 		/* Only handle RnR with BSSID */
 		if (ucHasBssid && ucScanEnable) {
@@ -2632,9 +2632,6 @@ struct BSS_DESC *scanAddToBssDesc(IN struct ADAPTER *prAdapter,
 			}
 			prBssDesc->fgIsHTPresent = TRUE;
 
-			prBssDesc->u2MaximumMpdu = (prHtCap->u2HtCapInfo &
-				HT_CAP_INFO_MAX_AMSDU_LEN);
-
 			/* Support AP Selection */
 			if (prBssDesc->fgMultiAnttenaAndSTBC)
 				break;
@@ -2648,6 +2645,8 @@ struct BSS_DESC *scanAddToBssDesc(IN struct ADAPTER *prAdapter,
 				((ucSpatial > 1) &&
 				(prHtCap->u2HtCapInfo & HT_CAP_INFO_TX_STBC));
 
+			prBssDesc->u2MaximumMpdu = (prHtCap->u2HtCapInfo &
+				HT_CAP_INFO_MAX_AMSDU_LEN);
 			/* end Support AP Selection */
 
 			break;
@@ -3814,10 +3813,6 @@ struct BSS_DESC *scanSearchBssDescByPolicy(
 	prConnSettings =
 		aisGetConnSettings(prAdapter, ucBssIndex);
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
-	if (!prBssInfo) {
-		log_dbg(SCN, ERROR, "prBssInfo is null\n");
-		return NULL;
-	}
 
 	prAisSpecBssInfo =
 		aisGetAisSpecBssInfo(prAdapter, ucBssIndex);
@@ -5149,9 +5144,6 @@ VHT_CAP_INFO_NUMBER_OF_SOUNDING_DIMENSIONS_OFFSET
 		>> __LOCAL_VAR__;
 #undef __LOCAL_VAR__
 #endif
-	prBssDesc->u2MaximumMpdu |= (prVhtCap->u4VhtCapInfo &
-		VHT_CAP_INFO_MAX_MPDU_LEN_MASK);
-
 	/* Support AP Selection*/
 	if (prBssDesc->fgMultiAnttenaAndSTBC)
 		return;
@@ -5163,6 +5155,9 @@ VHT_CAP_INFO_NUMBER_OF_SOUNDING_DIMENSIONS_OFFSET
 	prBssDesc->fgMultiAnttenaAndSTBC =
 		((ucSpatial > 1) && (prVhtCap->u4VhtCapInfo &
 			VHT_CAP_INFO_TX_STBC));
+
+	prBssDesc->u2MaximumMpdu |= (prVhtCap->u4VhtCapInfo &
+		VHT_CAP_INFO_MAX_MPDU_LEN_MASK);
 }
 
 void scanParseVHTOpIE(IN uint8_t *pucIE, IN struct BSS_DESC *prBssDesc)

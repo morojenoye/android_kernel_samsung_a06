@@ -174,7 +174,7 @@ static void rlmRecOpModeBwForClient(uint8_t ucVhtOpModeChannelWidth,
 
 static void rlmRecHtOpForClient(struct IE_HT_OP *prHtOp,
 			struct BSS_INFO *prBssInfo,
-			uint8_t *pucPrimaryChannel);
+			uint8_t ucPrimaryChannel);
 
 /*******************************************************************************
  *                              F U N C T I O N S
@@ -660,98 +660,6 @@ void rlmGenerateMTKOuiIE(struct ADAPTER *prAdapter,
 	prMsduInfo->u2FrameLength += IE_SIZE(pucBuffer);
 	pucBuffer += IE_SIZE(pucBuffer);
 } /* rlmGenerateMTKOuiIE */
-
-void rlmGenerateCustomer1OuiIE(struct ADAPTER *prAdapter,
-	 struct MSDU_INFO *prMsduInfo)
-{
-	struct WLAN_MAC_MGMT_HEADER *mgmt;
-	uint16_t frame_ctrl;
-	struct BSS_INFO *prBssInfo;
-	uint8_t *pucBuffer;
-	uint8_t aucCustomerOui[] = VENDOR_OUI_CUSTOMER1;
-	uint16_t len;
-
-	ASSERT(prAdapter);
-	ASSERT(prMsduInfo);
-
-	if (prAdapter->rWifiVar.ucCustomerOui == FEATURE_DISABLED)
-		return;
-
-	prBssInfo = prAdapter->aprBssInfo[prMsduInfo->ucBssIndex];
-	if (!prBssInfo)
-		return;
-
-	mgmt = (struct WLAN_MAC_MGMT_HEADER *)(prMsduInfo->prPacket);
-	frame_ctrl = mgmt->u2FrameCtrl & MASK_FRAME_TYPE;
-	pucBuffer = (uint8_t *)((uintptr_t)prMsduInfo->prPacket +
-				(uintptr_t)prMsduInfo->u2FrameLength);
-
-	CUSTOMER_OUI_IE(pucBuffer)->ucId = ELEM_ID_VENDOR;
-	CUSTOMER_OUI_IE(pucBuffer)->ucLength = ELEM_MIN_LEN_CUSTOMER1_OUI;
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[0] = aucCustomerOui[0];
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[1] = aucCustomerOui[1];
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[2] = aucCustomerOui[2];
-	CUSTOMER_OUI_IE(pucBuffer)->ucOuiType = VENDOR_OUI_TYPE_CUSTOMER1;
-	len = IE_SIZE(pucBuffer);
-	prMsduInfo->u2FrameLength += len;
-} /* rlmGenerateMTKOuiIE */
-
-void rlmGenerateCustomer2OuiIE(struct ADAPTER *prAdapter,
-	 struct MSDU_INFO *prMsduInfo)
-{
-	struct WLAN_MAC_MGMT_HEADER *mgmt;
-	uint16_t frame_ctrl;
-	struct BSS_INFO *prBssInfo;
-	uint8_t *pucBuffer;
-	uint8_t aucCustomerOui[] = VENDOR_OUI_CUSTOMER2;
-	uint16_t len;
-
-	ASSERT(prAdapter);
-	ASSERT(prMsduInfo);
-
-	if (prAdapter->rWifiVar.ucCustomerOui == FEATURE_DISABLED)
-		return;
-
-	prBssInfo = prAdapter->aprBssInfo[prMsduInfo->ucBssIndex];
-	if (!prBssInfo)
-		return;
-
-	mgmt = (struct WLAN_MAC_MGMT_HEADER *)(prMsduInfo->prPacket);
-	frame_ctrl = mgmt->u2FrameCtrl & MASK_FRAME_TYPE;
-	pucBuffer = (uint8_t *)((uintptr_t)prMsduInfo->prPacket +
-				(uintptr_t)prMsduInfo->u2FrameLength);
-
-	CUSTOMER_OUI_IE(pucBuffer)->ucId = ELEM_ID_VENDOR;
-	CUSTOMER_OUI_IE(pucBuffer)->ucLength = ELEM_MIN_LEN_CUSTOMER2_OUI;
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[0] = aucCustomerOui[0];
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[1] = aucCustomerOui[1];
-	CUSTOMER_OUI_IE(pucBuffer)->aucOui[2] = aucCustomerOui[2];
-	CUSTOMER_OUI_IE(pucBuffer)->ucOuiType = VENDOR_OUI_TYPE_CUSTOMER2;
-	len = IE_SIZE(pucBuffer);
-	prMsduInfo->u2FrameLength += len;
-}
-
-uint32_t rlmCalculateCustomer1OuiIELen(
-	struct ADAPTER *prAdapter,
-	uint8_t ucBssIndex,
-	struct STA_RECORD *prStaRec)
-{
-	uint32_t len = 0;
-
-	len += ELEM_MIN_LEN_CUSTOMER1_OUI;
-	return len;
-}
-
-uint32_t rlmCalculateCustomer2OuiIELen(
-	struct ADAPTER *prAdapter,
-	uint8_t ucBssIndex,
-	struct STA_RECORD *prStaRec)
-{
-	uint32_t len = 0;
-
-	len += ELEM_MIN_LEN_CUSTOMER2_OUI;
-	return len;
-}
 
 /*----------------------------------------------------------------------------*/
 /*!
@@ -2722,7 +2630,7 @@ static uint8_t rlmRecIeInfoForClient(struct ADAPTER *prAdapter,
 
 			prHtOp = (struct IE_HT_OP *)pucIE;
 			rlmRecHtOpForClient(prHtOp,
-				prBssInfo, &ucPrimaryChannel);
+				prBssInfo, ucPrimaryChannel);
 
 			break;
 
@@ -3252,7 +3160,7 @@ static uint8_t rlmRecIeInfoForClient(struct ADAPTER *prAdapter,
 			 */
 			aisUpdateParamsForCSA(prAdapter, prBssInfo);
 			rlmRecHtOpForClient(prHtOp,
-					prBssInfo, &ucPrimaryChannel);
+					prBssInfo, ucPrimaryChannel);
 		}
 
 		/* AP */
@@ -3862,7 +3770,7 @@ static u_int8_t rlmRecBcnInfoForClient(struct ADAPTER *prAdapter,
 
 static void rlmRecHtOpForClient(struct IE_HT_OP *prHtOp,
 				struct BSS_INFO *prBssInfo,
-				uint8_t *pucPrimaryChannel)
+				uint8_t ucPrimaryChannel)
 {
 	struct STA_RECORD *prStaRec;
 
@@ -3883,8 +3791,8 @@ static void rlmRecHtOpForClient(struct IE_HT_OP *prHtOp,
 	 * by its
 	 * secondary channel, but its DS IE is correct 20110610
 	 */
-	if (*pucPrimaryChannel == 0)
-		*pucPrimaryChannel = prHtOp->ucPrimaryChannel;
+	if (ucPrimaryChannel == 0)
+		ucPrimaryChannel = prHtOp->ucPrimaryChannel;
 	prBssInfo->ucHtOpInfo1 = prHtOp->ucInfo1;
 	prBssInfo->u2HtOpInfo2 = prHtOp->u2Info2;
 	prBssInfo->u2HtOpInfo3 = prHtOp->u2Info3;
@@ -5816,6 +5724,7 @@ void rlmCsaTimeout(IN struct ADAPTER *prAdapter,
 	struct PARAM_SSID rSsid;
 	struct BSS_DESC *prBssDesc;
 	struct STA_RECORD *prStaRec;
+	uint8_t fgIsSameChnl = FALSE;
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
 	if (!prBssInfo) {
@@ -5830,13 +5739,6 @@ void rlmCsaTimeout(IN struct ADAPTER *prAdapter,
 	}
 
 	prCSAParams = &prBssInfo->CSAParams;
-	if (prBssInfo->ucPrimaryChannel == prCSAParams->ucCsaNewCh) {
-		DBGLOG(RLM, WARN,
-			"BSS: " MACSTR " already at channel %u\n",
-			MAC2STR(prBssInfo->aucBSSID), prCSAParams->ucCsaNewCh);
-		return;
-	}
-
 	prBssInfo->ucPrimaryChannel = prCSAParams->ucCsaNewCh;
 	prBssInfo->eBand = (prCSAParams->ucCsaNewCh <= 14) ? BAND_2G4 : BAND_5G;
 
@@ -5878,6 +5780,8 @@ void rlmCsaTimeout(IN struct ADAPTER *prAdapter,
 		       MAC2STR(prBssInfo->aucBSSID),
 		       prBssDesc->ucChannelNum, prCSAParams->ucCsaNewCh,
 		       prBssInfo->eBand, prBssInfo->eBssSCO);
+		if (prBssDesc->ucChannelNum == prCSAParams->ucCsaNewCh)
+			fgIsSameChnl = TRUE;
 
 		prBssDesc->ucChannelNum = prBssInfo->ucPrimaryChannel;
 		prBssDesc->eChannelWidth = prBssInfo->ucVhtChannelWidth;
@@ -5934,18 +5838,12 @@ void rlmCsaTimeout(IN struct ADAPTER *prAdapter,
 	}
 
 	if (IS_BSS_AIS(prBssInfo) &&
-		!prBssInfo->fgIsAisSwitchingChnl) {
+		!prBssInfo->fgIsAisSwitchingChnl &&
+		!fgIsSameChnl) {
 		struct AIS_FSM_INFO *prAisFsmInfo;
 
 		prAisFsmInfo = aisGetAisFsmInfo(
 			prAdapter, prBssInfo->ucBssIndex);
-
-		/* Indicate PM abort to sync BSS state with FW */
-		nicPmIndicateBssAbort(prAdapter, prBssInfo->ucBssIndex);
-		/* Defer ucDTIMPeriod updating to when beacon is received */
-		prBssInfo->ucDTIMPeriod = 0;
-		/* Release channel if CSA immediately before set authorized */
-		aisFsmReleaseCh(prAdapter, prBssInfo->ucBssIndex);
 
 		prBssInfo->fgIsAisSwitchingChnl = TRUE;
 		aisReqJoinChPrivilegeForCSA(prAdapter, prAisFsmInfo,

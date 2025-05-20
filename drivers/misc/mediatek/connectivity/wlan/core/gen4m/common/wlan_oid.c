@@ -16058,7 +16058,8 @@ wlanoidSetRoamTrigger(IN struct ADAPTER *prAdapter,
 		return WLAN_STATUS_INVALID_LENGTH;
 
 	pi4Param = (int32_t *) pvSetBuffer;
-	if (*pi4Param < RSSI_LOW_BOUND || *pi4Param > RSSI_HIGH_BOUND) {
+	if (dBm_TO_RCPI(*pi4Param) < RCPI_LOW_BOUND ||
+	    dBm_TO_RCPI(*pi4Param) > RCPI_HIGH_BOUND) {
 		DBGLOG(INIT, ERROR, "roam trigger invalid %d\n",
 		       *pi4Param);
 		return WLAN_STATUS_INVALID_DATA;
@@ -16193,52 +16194,53 @@ uint32_t wlanoidSetSer(IN struct ADAPTER *prAdapter,
 	switch (u4CmdId) {
 	case SER_USER_CMD_DISABLE:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET,
-				 SER_SET_DISABLE, 0);
+				 SER_SET_DISABLE, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE:
-		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET, SER_SET_ENABLE, 0);
+		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET,
+				SER_SET_ENABLE, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_TRACKING_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
-				 SER_ENABLE_TRACKING, 0);
+				 SER_ENABLE_TRACKING, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L1_RECOVER_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING | SER_ENABLE_L1_RECOVER,
-				 0);
+				 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L2_RECOVER_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING | SER_ENABLE_L2_RECOVER,
-				 0);
+				 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L3_RX_ABORT_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING | SER_ENABLE_L3_RX_ABORT,
-				 0);
+				 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L3_TX_ABORT_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING | SER_ENABLE_L3_TX_ABORT,
-				 0);
+				 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L3_TX_DISABLE_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING |
-				 SER_ENABLE_L3_TX_DISABLE, 0);
+				 SER_ENABLE_L3_TX_DISABLE, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_L3_BFRECOVER_ONLY:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_SET_ENABLE_MASK,
 				 SER_ENABLE_TRACKING |
-				 SER_ENABLE_L3_BF_RECOVER, 0);
+				 SER_ENABLE_L3_BF_RECOVER, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_ENABLE_MASK_RECOVER_ALL:
@@ -16249,62 +16251,62 @@ uint32_t wlanoidSetSer(IN struct ADAPTER *prAdapter,
 				  SER_ENABLE_L3_RX_ABORT |
 				  SER_ENABLE_L3_TX_ABORT |
 				  SER_ENABLE_L3_TX_DISABLE |
-				  SER_ENABLE_L3_BF_RECOVER), 0);
+				  SER_ENABLE_L3_BF_RECOVER), 0, TRUE);
 		break;
 
 	case SER_USER_CMD_L0_RECOVER:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				SER_SET_L0_RECOVER, 0);
+				SER_SET_L0_RECOVER, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_L1_RECOVER:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L1_RECOVER, 0);
+				 SER_SET_L1_RECOVER, 0, TRUE);
 		break;
 
 	case SER_USER_CMD_L2_BN0_RECOVER:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L2_RECOVER, ENUM_BAND_0);
+				 SER_SET_L2_RECOVER, ENUM_BAND_0, TRUE);
 		break;
 
 	case SER_USER_CMD_L2_BN1_RECOVER:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L2_RECOVER, ENUM_BAND_1);
+				 SER_SET_L2_RECOVER, ENUM_BAND_1, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_RX0_ABORT:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_RX_ABORT, ENUM_BAND_0);
+				 SER_SET_L3_RX_ABORT, ENUM_BAND_0, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_RX1_ABORT:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_RX_ABORT, ENUM_BAND_1);
+				 SER_SET_L3_RX_ABORT, ENUM_BAND_1, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_TX0_ABORT:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_TX_ABORT, ENUM_BAND_0);
+				 SER_SET_L3_TX_ABORT, ENUM_BAND_0, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_TX1_ABORT:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_TX_ABORT, ENUM_BAND_1);
+				 SER_SET_L3_TX_ABORT, ENUM_BAND_1, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_TX0_DISABLE:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_TX_DISABLE, ENUM_BAND_0);
+				 SER_SET_L3_TX_DISABLE, ENUM_BAND_0, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_TX1_DISABLE:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_TX_DISABLE, ENUM_BAND_1);
+				 SER_SET_L3_TX_DISABLE, ENUM_BAND_1, TRUE);
 		break;
 
 	case SER_USER_CMD_L3_BF_RECOVER:
 		wlanoidSerExtCmd(prAdapter, SER_ACTION_RECOVER,
-				 SER_SET_L3_BF_RECOVER, 0);
+				 SER_SET_L3_BF_RECOVER, 0, TRUE);
 		break;
 
 	default:
@@ -16315,7 +16317,8 @@ uint32_t wlanoidSetSer(IN struct ADAPTER *prAdapter,
 }
 
 uint32_t wlanoidSerExtCmd(IN struct ADAPTER *prAdapter, uint8_t ucAction,
-			 uint8_t ucSerSet, uint8_t ucDbdcIdx) {
+			 uint8_t ucSerSet, uint8_t ucDbdcIdx,
+			 u_int8_t fgIsOid) {
 	struct EXT_CMD_SER_T rCmdSer = {0};
 	uint32_t rStatus = WLAN_STATUS_SUCCESS;
 
@@ -16328,7 +16331,7 @@ uint32_t wlanoidSerExtCmd(IN struct ADAPTER *prAdapter, uint8_t ucAction,
 					 EXT_CMD_ID_SER,
 					 TRUE,
 					 FALSE,
-					 TRUE,
+					 fgIsOid,
 					 NULL,
 					 nicOidCmdTimeoutCommon,
 					 sizeof(struct EXT_CMD_SER_T),
@@ -17924,12 +17927,12 @@ uint32_t wlanoidGetBssInfo(IN struct ADAPTER *prAdapter,
 		return WLAN_STATUS_SUCCESS;
 	}
 	/* OUI */
-	index += kalSprintf(pvSetBuffer + index, "%02x:%02x:%02x ",
+	index += kalSprintf(pvSetBuffer + index, "%x:%x:%x ",
 		prBssInfo->aucBSSID[0],
 		prBssInfo->aucBSSID[1],
 		prBssInfo->aucBSSID[2]);
 
-	DBGLOG(OID, TRACE, "OUI =%02x:%02x:%02x\n",
+	DBGLOG(OID, TRACE, "OUI =%x,%x,%x\n",
 		prBssInfo->aucBSSID[0],
 		prBssInfo->aucBSSID[1],
 		prBssInfo->aucBSSID[2]);
@@ -17991,7 +17994,7 @@ uint32_t wlanoidGetBssInfo(IN struct ADAPTER *prAdapter,
 	index += kalSprintf(pvSetBuffer + index, "%d ", tempout);
 
 	/* Antenna mode */
-	tempout = prBssInfo->ucOpTxNss - 1;
+	tempout = prBssInfo->ucOpTxNss;
 	index += kalSprintf(pvSetBuffer + index, "%d ", tempout);
 
 	/* MU-MIMO : return 0 */
@@ -18130,7 +18133,7 @@ uint32_t wlanoidGetStaInfo(IN struct ADAPTER *prAdapter,
 
 	/* remote Device Address MAC */
 	index += kalSprintf(pvSetBuffer + index,
-		"%02x:%02x:%02x:%02x:%02x:%02x ",
+		"%02x,%02x,%02x,%02x,%02x,%02x ",
 		prStaRec->aucMacAddr[0],
 		prStaRec->aucMacAddr[1],
 		prStaRec->aucMacAddr[2],
@@ -18138,7 +18141,7 @@ uint32_t wlanoidGetStaInfo(IN struct ADAPTER *prAdapter,
 		prStaRec->aucMacAddr[4],
 		prStaRec->aucMacAddr[5]);
 
-	DBGLOG(OID, TRACE, "OUI =%02x:%02x:%02x:%02x:%02x:%02x\n",
+	DBGLOG(OID, TRACE, "OUI =%02x,%02x,%02x,%02x,%02x,%02x\n",
 		prStaRec->aucMacAddr[0],
 		prStaRec->aucMacAddr[1],
 		prStaRec->aucMacAddr[2],
@@ -18156,12 +18159,12 @@ uint32_t wlanoidGetStaInfo(IN struct ADAPTER *prAdapter,
 	index += kalSprintf(pvSetBuffer + index, "%s ", capDefault);
 
 	/* OUI */
-	index += kalSprintf(pvSetBuffer + index, "%02x:%02x:%02x ",
+	index += kalSprintf(pvSetBuffer + index, "%02x,%02x,%02x ",
 		prStaRec->aucMacAddr[0],
 		prStaRec->aucMacAddr[1],
 		prStaRec->aucMacAddr[2]);
 
-	DBGLOG(OID, TRACE, "OUI =%02x:%02x:%02x\n",
+	DBGLOG(OID, TRACE, "OUI =%x,%x,%x\n",
 		prStaRec->aucMacAddr[0],
 		prStaRec->aucMacAddr[1],
 		prStaRec->aucMacAddr[2]);
