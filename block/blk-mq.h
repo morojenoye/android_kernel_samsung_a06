@@ -43,8 +43,8 @@ struct request *blk_mq_dequeue_from_ctx(struct blk_mq_hw_ctx *hctx,
 /*
  * Internal helpers for allocating/freeing the request map
  */
-void blk_mq_free_rqs(struct blk_mq_tag_set *set, struct blk_mq_tags *tags,
-		     unsigned int hctx_idx);
+void blk_mq_free_rqs_ext(struct blk_mq_tag_set *set, struct blk_mq_tags *tags,
+		     unsigned int hctx_idx, struct blk_mq_tags *references);
 void blk_mq_free_rq_map(struct blk_mq_tags *tags);
 struct blk_mq_tags *blk_mq_alloc_rq_map(struct blk_mq_tag_set *set,
 					unsigned int hctx_idx,
@@ -190,7 +190,10 @@ static inline void blk_mq_put_driver_tag_hctx(struct blk_mq_hw_ctx *hctx,
 	if (rq->tag == -1 || rq->internal_tag == -1)
 		return;
 
+/*A06 code for AL7160A-2091 by Niebingling at 2024/05/31 start*/
+	hctx->tags->rqs[rq->tag] = NULL;
 	__blk_mq_put_driver_tag(hctx, rq);
+/*A06 code for AL7160A-2091 by Niebingling at 2024/05/31 end*/
 }
 
 static inline void blk_mq_put_driver_tag(struct request *rq)
@@ -201,6 +204,9 @@ static inline void blk_mq_put_driver_tag(struct request *rq)
 		return;
 
 	hctx = blk_mq_map_queue(rq->q, rq->mq_ctx->cpu);
+/*A06 code for AL7160A-2091 by Niebingling at 2024/05/31 start*/
+	hctx->tags->rqs[rq->tag] = NULL;
+/*A06 code for AL7160A-2091 by Niebingling at 2024/05/31 end*/
 	__blk_mq_put_driver_tag(hctx, rq);
 }
 

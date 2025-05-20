@@ -877,8 +877,9 @@ static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 	}
 	return sprintf(buf, "%u\n", policy->cpuinfo.max_freq);
 }
-
-cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
+/*A06 code for SR-AL7160A-01-765 by jinyan at 20240329 start*/
+cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0444);
+/*A06 code for SR-AL7160A-01-765 by jinyan at 20240329 end*/
 cpufreq_freq_attr_ro(cpuinfo_min_freq);
 cpufreq_freq_attr_ro(cpuinfo_max_freq);
 cpufreq_freq_attr_ro(cpuinfo_transition_latency);

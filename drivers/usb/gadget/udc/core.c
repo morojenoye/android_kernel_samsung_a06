@@ -1041,13 +1041,29 @@ static void usb_gadget_state_work(struct work_struct *work)
 		sysfs_notify(&udc->dev.kobj, NULL, "state");
 }
 
+/* A06 code for AL7160A-58 by zhangziyi at 20240415 start */
+#if defined(CONFIG_HQ_PROJECT_O8)
+bool gadget_info_connected = false;
+
+bool gadget_info_is_connected(void)
+{
+	return gadget_info_connected;
+}
+#endif //CONFIG_HQ_PROJECT_O8
+
 void usb_gadget_set_state(struct usb_gadget *gadget,
 		enum usb_device_state state)
 {
 	gadget->state = state;
 	schedule_work(&gadget->work);
+
+	#if defined(CONFIG_HQ_PROJECT_O8)
+	gadget_info_connected = gadget->state;
+	pr_info("CX2560X get usb gadget state: %d\n", gadget_info_connected);
+	#endif //CONFIG_HQ_PROJECT_O8
 }
 EXPORT_SYMBOL_GPL(usb_gadget_set_state);
+/* A06 code for AL7160A-58 by zhangziyi at 20240415 end */
 
 /* ------------------------------------------------------------------------- */
 
