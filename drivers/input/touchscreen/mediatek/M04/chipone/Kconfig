@@ -1,5 +1,5 @@
 config TOUCHSCREEN_CHIPONE_CHIPSET_M04
-        tristate "Chipone TDDI touchscreen for Mediatek package"
+        bool "Chipone TDDI touchscreen for Mediatek package"
         depends on SPI
         default n
         help

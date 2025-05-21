@@ -30,8 +30,8 @@ config TOUCHSCREEN_GALAXYCORE_CHIPSET
 source "drivers/input/touchscreen/mediatek/novatek_touch/Kconfig"
 source "drivers/input/touchscreen/mediatek/focaltech_touch_ax3565/Kconfig"
 source "drivers/input/touchscreen/mediatek/ilitek_touch/Kconfig"
-source "drivers/input/touchscreen/mediatek/hxchipset_ot8/Kconfig"
-source "drivers/input/touchscreen/mediatek/hxchipset/Kconfig"
+# source "drivers/input/touchscreen/mediatek/hxchipset_ot8/Kconfig"
+# source "drivers/input/touchscreen/mediatek/hxchipset/Kconfig"
 
 config TOUCHSCREEN_JADARD_CHIPSET
 	bool "Jadard touch chipset"
@@ -54,7 +54,7 @@ config TOUCHSCREEN_HIMAX_OT8
         If unsure, say N.
 
 # hs14 code for AL6528A-5 by hehaoran5 at 20220829 start
-source "drivers/input/touchscreen/mediatek/O22/omnivision_tcm/Kconfig"
+# source "drivers/input/touchscreen/mediatek/O22/omnivision_tcm/Kconfig"
 # hs14 code for AL6528A-5 by hehaoran5 at 20220829 end
 # hs14 code for SR-AL6528A-01-479 by liudi at 20220906 start
 config TOUCHSCREEN_JADARD_CHIPSET_O22
@@ -78,7 +78,7 @@ config TOUCHSCREEN_HIMAX_CHIPSET_O22
 		report 10 touches at a time.
 		If unsure, say N.
 
-source "drivers/input/touchscreen/mediatek/O22/hxchipset/Kconfig"
+# source "drivers/input/touchscreen/mediatek/O22/hxchipset/Kconfig"
 # hs14 code for SR-AL6528A-01-454 by zhangxiongyi at 20220909 end
 # hs14 code for SR-AL6528A-01-491 by hehaoran5 at 20220914 start
 source "drivers/input/touchscreen/mediatek/O22/chipone-tddi/Kconfig"

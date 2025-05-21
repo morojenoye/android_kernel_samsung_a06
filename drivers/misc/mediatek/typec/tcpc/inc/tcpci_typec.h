@@ -58,7 +58,7 @@ extern int tcpc_typec_handle_ctd(struct tcpc_device *tcpc,
 /* A06 code for P240528-06609 by shixuanxuan at 20240531 start*/
 #ifdef CONFIG_HQ_PROJECT_O8
 extern bool g_pd_online;
-EXPORT_SYMBOL(g_pd_online);
+// EXPORT_SYMBOL(g_pd_online);
 #endif
 /* A06 code for P240528-06609 by shixuanxuan at 20240531 end*/
 
